@@ -22,6 +22,8 @@ Route::get('/', function () {
     return view('chart', ['chartId' => $chart->id]);
 })->name('home');
 
+Route::view('/privacy', 'privacy')->name('privacy');
+
 Route::get('/magic/login/{user}', [MagicLinkController::class, 'login'])
     ->middleware('signed')
     ->name('magic.login');

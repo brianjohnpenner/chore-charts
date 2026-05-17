@@ -164,6 +164,12 @@ input, select {
 
 .cc-print-all { display: none; }
 
+.cc-footer { margin-top: 2rem; text-align: center; font-size: 0.85rem; color: #64748b; }
+.cc-footer a { color: inherit; }
+
+.cc-app section h2 { font-size: 1.05rem; margin: 1.25rem 0 0.4rem; }
+.cc-app section p, .cc-app section ul { margin: 0.4rem 0; line-height: 1.5; }
+
 @media print {
   body { background: #fff; }
   .cc-editor-panel, .cc-workspace, .cc-preview { display: none !important; }

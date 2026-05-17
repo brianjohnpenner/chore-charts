@@ -448,4 +448,8 @@ new class extends Component {
             @include('partials.chart-page', ['child' => $child, 'icons' => $icons])
         @endforeach
     </div>
+
+    <footer class="cc-footer">
+        <a href="{{ route('privacy') }}">Privacy policy</a>
+    </footer>
 </div>
