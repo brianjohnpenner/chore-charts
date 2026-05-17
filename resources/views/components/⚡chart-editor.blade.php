@@ -14,6 +14,7 @@ new class extends Component {
     public array $chart = [];
     public string $email = '';
     public string $viewMode = 'edit';
+    public bool $hasEdited = false;
 
     public function mount(int $chartId): void
     {
@@ -21,14 +22,22 @@ new class extends Component {
         $this->chart = Chart::findOrFail($chartId)->data;
     }
 
-    public function updated(): void
+    public function updated(string $name): void
     {
-        $this->save();
+        if (str_starts_with($name, 'chart')) {
+            $this->markEdited();
+        }
     }
 
     protected function save(): void
     {
         Chart::where('id', $this->chartId)->update(['data' => $this->chart]);
+    }
+
+    protected function markEdited(): void
+    {
+        $this->hasEdited = true;
+        $this->save();
     }
 
     public function activeChildIndex(): int
@@ -67,7 +76,7 @@ new class extends Component {
         $child = ChartDefaults::defaultChild('New Child', $existingIds);
         $this->chart['children'][] = $child;
         $this->chart['activeChildId'] = $child['id'];
-        $this->save();
+        $this->markEdited();
     }
 
     public function duplicateChild(): void
@@ -85,7 +94,7 @@ new class extends Component {
         $copy['childName'] = $base;
         $this->chart['children'][] = $copy;
         $this->chart['activeChildId'] = $id;
-        $this->save();
+        $this->markEdited();
     }
 
     public function deleteChild(): void
@@ -97,14 +106,14 @@ new class extends Component {
         array_splice($this->chart['children'], $i, 1);
         $newIdx = max(0, $i - 1);
         $this->chart['activeChildId'] = $this->chart['children'][$newIdx]['id'];
-        $this->save();
+        $this->markEdited();
     }
 
     public function setOrientation(string $orientation): void
     {
         $i = $this->activeChildIndex();
         $this->chart['children'][$i]['orientation'] = $orientation === 'portrait' ? 'portrait' : 'landscape';
-        $this->save();
+        $this->markEdited();
     }
 
     public function addSection(): void
@@ -115,14 +124,14 @@ new class extends Component {
             'name' => 'New Section',
             'rows' => [],
         ];
-        $this->save();
+        $this->markEdited();
     }
 
     public function deleteSection(int $sectionIndex): void
     {
         $i = $this->activeChildIndex();
         array_splice($this->chart['children'][$i]['sections'], $sectionIndex, 1);
-        $this->save();
+        $this->markEdited();
     }
 
     public function moveSection(int $sectionIndex, int $direction): void
@@ -135,7 +144,7 @@ new class extends Component {
         }
         $item = array_splice($list, $sectionIndex, 1)[0];
         array_splice($list, $next, 0, [$item]);
-        $this->save();
+        $this->markEdited();
     }
 
     public function addRow(int $sectionIndex, string $type): void
@@ -144,14 +153,14 @@ new class extends Component {
         $label = $type === 'regular' ? 'New chore' : '';
         $this->chart['children'][$i]['sections'][$sectionIndex]['rows'][] =
             ChartDefaults::choreRow($type, $label, 'room');
-        $this->save();
+        $this->markEdited();
     }
 
     public function deleteRow(int $sectionIndex, int $rowIndex): void
     {
         $i = $this->activeChildIndex();
         array_splice($this->chart['children'][$i]['sections'][$sectionIndex]['rows'], $rowIndex, 1);
-        $this->save();
+        $this->markEdited();
     }
 
     public function moveRow(int $sectionIndex, int $rowIndex, int $direction): void
@@ -164,7 +173,7 @@ new class extends Component {
         }
         $item = array_splice($list, $rowIndex, 1)[0];
         array_splice($list, $next, 0, [$item]);
-        $this->save();
+        $this->markEdited();
     }
 
     public function changeRowType(int $sectionIndex, int $rowIndex, string $type): void
@@ -181,7 +190,7 @@ new class extends Component {
         if (! isset($row['icon']) || ! in_array($row['icon'], ChartDefaults::ICONS, true)) {
             $row['icon'] = 'room';
         }
-        $this->save();
+        $this->markEdited();
     }
 
     public function addWeeklyRow(string $type): void
@@ -190,14 +199,14 @@ new class extends Component {
         $label = $type === 'regular' ? 'New weekly chore' : '';
         $this->chart['children'][$i]['weeklyChores']['rows'][] =
             ChartDefaults::weeklyRow($type, $label);
-        $this->save();
+        $this->markEdited();
     }
 
     public function deleteWeeklyRow(int $rowIndex): void
     {
         $i = $this->activeChildIndex();
         array_splice($this->chart['children'][$i]['weeklyChores']['rows'], $rowIndex, 1);
-        $this->save();
+        $this->markEdited();
     }
 
     public function moveWeeklyRow(int $rowIndex, int $direction): void
@@ -210,7 +219,7 @@ new class extends Component {
         }
         $item = array_splice($list, $rowIndex, 1)[0];
         array_splice($list, $next, 0, [$item]);
-        $this->save();
+        $this->markEdited();
     }
 
     public function changeWeeklyRowType(int $rowIndex, string $type): void
@@ -221,7 +230,7 @@ new class extends Component {
         if ($row['type'] === 'empty') {
             $row['label'] = '';
         }
-        $this->save();
+        $this->markEdited();
     }
 
     public function setPreview(string $mode): void
@@ -272,27 +281,33 @@ new class extends Component {
             </div>
         </div>
 
-        <div class="cc-account-bar">
-            @auth
+        @auth
+            <div class="cc-account-bar">
                 <span>Signed in as <strong>{{ auth()->user()->email }}</strong> — changes save automatically.</span>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="cc-link">Sign out</button>
                 </form>
-            @else
+                @if (session('status'))
+                    <p class="cc-flash">{{ session('status') }}</p>
+                @endif
+            </div>
+        @else
+            <div @class(['cc-save-card', 'cc-save-card-edited' => $hasEdited])>
+                <div class="cc-save-card-copy">
+                    <strong>{{ $hasEdited ? 'Save your chart before you lose it' : 'Save your chart long-term' }}</strong>
+                    <span>This chart lives in your browser only. Add your email and we'll send a one-click sign-in link so you can come back to it anywhere.</span>
+                </div>
                 <form wire:submit.prevent="sendMagicLink" class="cc-magic-form">
-                    <label>
-                        <span>Save this chart — get an email link:</span>
-                        <input type="email" wire:model="email" placeholder="you@example.com" required>
-                    </label>
+                    <input type="email" wire:model="email" placeholder="you@example.com" aria-label="Email address" required>
                     <button type="submit" class="cc-primary">Email me a link</button>
-                    @error('email') <span class="cc-error">{{ $message }}</span> @enderror
                 </form>
-            @endauth
-            @if (session('status'))
-                <p class="cc-flash">{{ session('status') }}</p>
-            @endif
-        </div>
+                @error('email') <p class="cc-error">{{ $message }}</p> @enderror
+                @if (session('status'))
+                    <p class="cc-flash">{{ session('status') }}</p>
+                @endif
+            </div>
+        @endauth
 
         <div class="cc-settings">
             <label class="cc-field">

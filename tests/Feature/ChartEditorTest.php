@@ -163,6 +163,42 @@ class ChartEditorTest extends TestCase
         $this->assertSame('landscape', $chart->fresh()->data['children'][0]['orientation']);
     }
 
+    public function test_has_edited_starts_false_and_flips_after_a_chart_action(): void
+    {
+        [$component] = $this->mountWithDefaultChart();
+
+        $component->assertSet('hasEdited', false);
+
+        $component->call('addSection')->assertSet('hasEdited', true);
+    }
+
+    public function test_typing_in_email_field_does_not_mark_chart_as_edited(): void
+    {
+        [$component] = $this->mountWithDefaultChart();
+
+        $component->set('email', 'foo@bar.test')->assertSet('hasEdited', false);
+    }
+
+    public function test_editing_chart_data_via_wire_model_marks_edited(): void
+    {
+        [$component] = $this->mountWithDefaultChart();
+
+        $component->set('chart.children.0.childName', 'Renamed')->assertSet('hasEdited', true);
+    }
+
+    public function test_save_card_shows_urgency_copy_after_first_edit(): void
+    {
+        $chart = Chart::createDefault();
+
+        $component = Livewire::test('chart-editor', ['chartId' => $chart->id])
+            ->assertSee('Save your chart long-term')
+            ->assertDontSee('Save your chart before you lose it');
+
+        $component->call('addSection')
+            ->assertSee('Save your chart before you lose it')
+            ->assertDontSee('Save your chart long-term');
+    }
+
     public function test_preview_mode_toggle(): void
     {
         [$component] = $this->mountWithDefaultChart();

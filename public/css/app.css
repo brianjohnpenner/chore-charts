@@ -58,11 +58,31 @@ input, select {
   border-radius: 8px;
   font-size: 0.9rem;
 }
-.cc-magic-form { display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
-.cc-magic-form label { display: flex; align-items: center; gap: 0.5rem; }
-.cc-magic-form input { min-width: 220px; }
-.cc-flash { color: #166534; background: #dcfce7; padding: 0.4rem 0.7rem; border-radius: 6px; margin: 0; flex-basis: 100%; }
-.cc-error { color: #b91c1c; font-size: 0.85rem; }
+.cc-save-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+.cc-save-card-copy { display: flex; flex-direction: column; gap: 0.2rem; flex: 1 1 280px; min-width: 240px; }
+.cc-save-card-copy strong { font-size: 1.02rem; }
+.cc-save-card-copy span { font-size: 0.88rem; color: #475569; }
+.cc-save-card-edited {
+  background: #fef9c3;
+  border-color: #facc15;
+  box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.25);
+}
+.cc-save-card-edited .cc-save-card-copy strong { color: #854d0e; }
+.cc-magic-form { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+.cc-magic-form input { min-width: 220px; flex: 1; }
+.cc-flash { color: #166534; background: #dcfce7; padding: 0.4rem 0.7rem; border-radius: 6px; margin: 0.4rem 0 0; flex-basis: 100%; }
+.cc-error { color: #b91c1c; font-size: 0.85rem; margin: 0.4rem 0 0; flex-basis: 100%; }
 
 .cc-settings { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
 .cc-field { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.85rem; color: #475569; }
