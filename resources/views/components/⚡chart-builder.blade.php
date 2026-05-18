@@ -308,8 +308,14 @@ new class extends Component
 };
 ?>
 
+@php
+    $childIndex = $this->activeChildIndex();
+    $rowGridCols = '6rem minmax(14rem,1fr) repeat(7,2.55rem) 3rem 4.5rem';
+    $weeklyRowGridCols = '8rem minmax(12rem,1fr) 4rem 4.5rem';
+@endphp
+
 <div
-    class="app-shell"
+    class="min-h-screen"
     x-data="{
         isNew: @js($chartId === null),
         draftKey: 'chore_chart_draft',
@@ -337,48 +343,48 @@ new class extends Component
     "
     @chart-saved.window="localStorage.removeItem(draftKey); isNew = false;"
 >
-    <header class="topbar no-print">
+    <header class="no-print container-app mt-5 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <div>
-            <h1>Chore Charts</h1>
-            <p>Build the chart, print it, and save to get a link you can come back to.</p>
+            <h1 class="m-0 mb-1 text-2xl font-extrabold leading-tight">Chore Charts</h1>
+            <p class="m-0 text-sm text-slate-500">Build the chart, print it, and save to get a link you can come back to.</p>
         </div>
 
-        <div class="topbar-actions">
-            <div class="mode-toggle" role="group" aria-label="View mode">
-                <button type="button" class="{{ $viewMode === 'edit' ? 'active' : '' }}" wire:click="$set('viewMode', 'edit')">Editor</button>
-                <button type="button" class="{{ $viewMode === 'preview' ? 'active' : '' }}" wire:click="$set('viewMode', 'preview')">Print View</button>
+        <div class="flex flex-wrap items-center gap-2">
+            <div class="grid grid-cols-2 gap-0.5 rounded-md border border-slate-300 bg-slate-200 p-0.5" role="group" aria-label="View mode">
+                <button type="button" class="btn border-0 rounded-md min-w-[6.5rem] {{ $viewMode === 'edit' ? 'btn-active' : 'bg-transparent text-slate-600 hover:bg-transparent' }}" wire:click="$set('viewMode', 'edit')">Editor</button>
+                <button type="button" class="btn border-0 rounded-md min-w-[6.5rem] {{ $viewMode === 'preview' ? 'btn-active' : 'bg-transparent text-slate-600 hover:bg-transparent' }}" wire:click="$set('viewMode', 'preview')">Print View</button>
             </div>
-            <button type="button" class="primary" onclick="window.print()">Print</button>
-            <a class="topbar-link" href="{{ route('privacy') }}">Privacy</a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">Print</button>
+            <a class="btn no-underline" href="{{ route('privacy') }}">Privacy</a>
         </div>
     </header>
 
     @if ($notice || $error)
-        <div class="status-line no-print {{ $error ? 'error' : '' }}">
+        <div class="no-print container-app mt-5 rounded-lg border px-5 py-3 font-bold {{ $error ? 'border-rose-300 bg-rose-100 text-rose-800' : 'border-emerald-300 bg-emerald-100 text-emerald-900' }}">
             {{ $error ?: $notice }}
         </div>
     @endif
 
-    <section class="save-strip no-print">
+    <section class="no-print container-app mt-5 flex flex-wrap items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-sm">
         @if ($shareUrl)
-            <div>
-                <strong>Saved. Changes autosave.</strong>
-                <span>Bookmark this URL — it's the only way back to this chart.</span>
-                <input type="text" readonly class="share-url" value="{{ $shareUrl }}" onclick="this.select()">
+            <div class="min-w-0 flex-1">
+                <strong class="block">Saved. Changes autosave.</strong>
+                <span class="block text-sm text-slate-500">Bookmark this URL — it's the only way back to this chart.</span>
+                <input type="text" readonly class="field mt-2" value="{{ $shareUrl }}" onclick="this.select()">
             </div>
-            <div class="magic-form">
-                <input type="email" wire:model="email" placeholder="you@example.com">
-                <button type="button" wire:click="emailLink">Email Link</button>
+            <div class="flex flex-wrap items-center gap-2 min-w-[min(26rem,100%)]">
+                <input type="email" class="field flex-1" wire:model="email" placeholder="you@example.com">
+                <button type="button" class="btn" wire:click="emailLink">Email Link</button>
             </div>
-            @error('email') <span class="form-error">{{ $message }}</span> @enderror
+            @error('email') <span class="inline-flex rounded-md bg-rose-100 px-2 py-1 text-sm font-bold text-rose-800">{{ $message }}</span> @enderror
         @else
-            <div>
-                <strong>Want to save this chart?</strong>
-                <span>Save it to get a shareable link. Add an email if you'd like a copy of the link.</span>
+            <div class="min-w-0 flex-1">
+                <strong class="block">Want to save this chart?</strong>
+                <span class="block text-sm text-slate-500">Save it to get a shareable link. Add an email if you'd like a copy of the link.</span>
             </div>
-            <div class="magic-form">
-                <input type="email" wire:model="email" placeholder="you@example.com (optional)">
-                <button type="button" class="primary" wire:click="saveChart">Save Chart</button>
+            <div class="flex flex-wrap items-center gap-2 min-w-[min(26rem,100%)]">
+                <input type="email" class="field flex-1" wire:model="email" placeholder="you@example.com (optional)">
+                <button type="button" class="btn btn-primary" wire:click="saveChart">Save Chart</button>
             </div>
         @endif
     </section>
@@ -387,12 +393,12 @@ new class extends Component
         $child = $this->activeChild();
     @endphp
 
-    <main class="workspace {{ $viewMode === 'preview' ? 'preview-only' : '' }}">
-        <section class="editor no-print {{ $viewMode !== 'edit' ? 'hidden-mode' : '' }}">
-            <div class="panel compact-grid">
+    <main class="container-app mt-5 grid gap-5 pb-5 {{ $viewMode === 'preview' ? 'grid-cols-1' : 'grid-cols-1 xl:grid-cols-[minmax(42rem,1.12fr)_minmax(38rem,.88fr)]' }}">
+        <section class="no-print grid gap-4 {{ $viewMode !== 'edit' ? 'hidden-mode' : '' }}">
+            <div class="panel grid grid-cols-1 gap-3 md:grid-cols-[repeat(3,minmax(10rem,1fr))_auto]">
                 <label>
-                    <span>Child</span>
-                    <select wire:model.live="chart.activeChildId">
+                    <span class="panel-label">Child</span>
+                    <select class="field" wire:model.live="chart.activeChildId">
                         @foreach ($chart['children'] as $savedChild)
                             <option value="{{ $savedChild['id'] }}">{{ $savedChild['childName'] }}</option>
                         @endforeach
@@ -400,53 +406,53 @@ new class extends Component
                 </label>
 
                 <label>
-                    <span>Name</span>
-                    <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.childName">
+                    <span class="panel-label">Name</span>
+                    <input type="text" class="field" wire:model.live="chart.children.{{ $childIndex }}.childName">
                 </label>
 
                 <label>
-                    <span>Orientation</span>
-                    <select wire:model.live="chart.children.{{ $this->activeChildIndex() }}.orientation">
+                    <span class="panel-label">Orientation</span>
+                    <select class="field" wire:model.live="chart.children.{{ $childIndex }}.orientation">
                         <option value="landscape">Landscape</option>
                         <option value="portrait">Portrait</option>
                     </select>
                 </label>
 
-                <div class="button-row">
-                    <button type="button" wire:click="addChild">Add Child</button>
-                    <button type="button" wire:click="duplicateChild">Duplicate</button>
-                    <button type="button" wire:click="deleteChild" @disabled(count($chart['children']) === 1)>Delete</button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" class="btn" wire:click="addChild">Add Child</button>
+                    <button type="button" class="btn" wire:click="duplicateChild">Duplicate</button>
+                    <button type="button" class="btn" wire:click="deleteChild" @disabled(count($chart['children']) === 1)>Delete</button>
                 </div>
             </div>
 
             <div class="panel">
-                <h2>Days</h2>
-                <div class="days-editor">
+                <h2 class="panel-label mb-3 text-base">Days</h2>
+                <div class="grid gap-2.5 grid-cols-[repeat(auto-fit,minmax(7rem,1fr))]">
                     @foreach ($child['days'] as $dayIndex => $day)
-                        <label>
-                            <span>{{ $day['key'] }}</span>
-                            <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.days.{{ $dayIndex }}.label">
-                            <input type="color" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.days.{{ $dayIndex }}.color">
+                        <label class="grid gap-1.5">
+                            <span class="panel-label">{{ $day['key'] }}</span>
+                            <input type="text" class="field" wire:model.live="chart.children.{{ $childIndex }}.days.{{ $dayIndex }}.label">
+                            <input type="color" class="field h-[2.2rem] p-0.5" wire:model.live="chart.children.{{ $childIndex }}.days.{{ $dayIndex }}.color">
                         </label>
                     @endforeach
                 </div>
             </div>
 
             @foreach ($child['sections'] as $sectionIndex => $section)
-                <section class="panel section-editor" wire:key="section-editor-{{ $section['id'] }}">
-                    <div class="section-heading">
-                        <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.name">
-                        <div class="button-row">
-                            <button type="button" wire:click="addRow({{ $sectionIndex }}, 'icon')">Add Icon</button>
-                            <button type="button" wire:click="addRow({{ $sectionIndex }}, 'regular')">Add Chore</button>
-                            <button type="button" wire:click="addRow({{ $sectionIndex }}, 'empty')">Add Empty</button>
-                            <button type="button" class="danger" wire:click="deleteSection({{ $sectionIndex }})">Delete</button>
+                <section class="panel" wire:key="section-editor-{{ $section['id'] }}">
+                    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <input type="text" class="field flex-1 min-w-[14rem] font-extrabold" wire:model.live="chart.children.{{ $childIndex }}.sections.{{ $sectionIndex }}.name">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" class="btn" wire:click="addRow({{ $sectionIndex }}, 'icon')">Add Icon</button>
+                            <button type="button" class="btn" wire:click="addRow({{ $sectionIndex }}, 'regular')">Add Chore</button>
+                            <button type="button" class="btn" wire:click="addRow({{ $sectionIndex }}, 'empty')">Add Empty</button>
+                            <button type="button" class="btn btn-danger" wire:click="deleteSection({{ $sectionIndex }})">Delete</button>
                         </div>
                     </div>
 
-                    <div class="row-grid header">
-                        <span>Type</span>
-                        <span>Chore</span>
+                    <div class="grid items-center gap-1.5 text-center text-xs font-extrabold uppercase text-slate-500" style="grid-template-columns: {{ $rowGridCols }}">
+                        <span class="text-left">Type</span>
+                        <span class="text-left">Chore</span>
                         @foreach ($child['days'] as $day)
                             <span>{{ $day['label'] }}</span>
                         @endforeach
@@ -455,28 +461,29 @@ new class extends Component
                     </div>
 
                     @foreach ($section['rows'] as $rowIndex => $row)
-                        <div class="row-grid" wire:key="row-editor-{{ $row['id'] }}">
-                            <select wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.type">
+                        <div class="relative grid items-center gap-1.5 border-t border-slate-100 min-h-[3.1rem] py-1.5 has-[.icon-picker[open]]:z-40" wire:key="row-editor-{{ $row['id'] }}" style="grid-template-columns: {{ $rowGridCols }}">
+                            <select class="field" wire:model.live="chart.children.{{ $childIndex }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.type">
                                 <option value="icon">Icon</option>
                                 <option value="regular">Regular</option>
                                 <option value="empty">Empty</option>
                             </select>
 
-                            <div class="chore-fields">
+                            <div class="grid items-center gap-1.5 grid-cols-[minmax(0,auto)_minmax(8rem,1fr)]">
                                 @if ($row['type'] === 'icon')
-                                    <details class="icon-picker">
-                                        <summary>
-                                            <span class="icon-picker-symbol svg-icon">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
+                                    <details class="icon-picker relative min-w-[9.5rem]">
+                                        <summary class="flex cursor-pointer list-none items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 font-bold min-h-[2.35rem]">
+                                            <span class="icon-picker-symbol inline-flex flex-none items-center justify-center">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
                                             <span>{{ $this->iconLabel($row['icon'] ?? 'room') }}</span>
+                                            <span class="ml-auto inline-block h-0 w-0 border-x-[0.25rem] border-t-[0.32rem] border-x-transparent border-t-slate-500"></span>
                                         </summary>
-                                        <div class="icon-picker-menu">
+                                        <div class="absolute left-0 top-full mt-1 z-20 grid gap-1 rounded-lg border border-slate-300 bg-white p-1.5 shadow-lg min-w-[13rem]">
                                             @foreach ($this->iconOptions() as $icon => $label)
                                                 <button
                                                     type="button"
-                                                    class="{{ ($row['icon'] ?? 'room') === $icon ? 'selected' : '' }}"
-                                                    wire:click="$set('chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.icon', '{{ $icon }}')"
+                                                    class="inline-flex items-center justify-start gap-1.5 rounded-md border-0 px-2 py-1.5 min-h-[2.1rem] font-bold hover:bg-slate-100 {{ ($row['icon'] ?? 'room') === $icon ? 'bg-slate-200' : 'bg-white' }}"
+                                                    wire:click="$set('chart.children.{{ $childIndex }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.icon', '{{ $icon }}')"
                                                 >
-                                                    <span class="icon-picker-symbol svg-icon">{!! $this->iconSvg($icon) !!}</span>
+                                                    <span class="icon-picker-symbol inline-flex flex-none items-center justify-center">{!! $this->iconSvg($icon) !!}</span>
                                                     <span>{{ $label }}</span>
                                                 </button>
                                             @endforeach
@@ -485,75 +492,75 @@ new class extends Component
                                 @endif
 
                                 @if ($row['type'] === 'empty')
-                                    <span class="empty-label">Empty box</span>
+                                    <span class="font-bold text-slate-500 {{ ! isset($row['type']) || $row['type'] === 'empty' ? 'col-span-full' : '' }}">Empty box</span>
                                 @else
-                                    <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.label" placeholder="Chore label">
+                                    <input type="text" class="field {{ $row['type'] !== 'icon' ? 'col-span-full' : '' }}" wire:model.live="chart.children.{{ $childIndex }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.label" placeholder="Chore label">
                                 @endif
                             </div>
 
                             @foreach ($child['days'] as $day)
-                                <label class="day-check">
-                                    <input type="checkbox" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.days.{{ $day['key'] }}">
+                                <label class="flex items-center justify-center">
+                                    <input type="checkbox" class="h-4 w-4" wire:model.live="chart.children.{{ $childIndex }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.days.{{ $day['key'] }}">
                                 </label>
                             @endforeach
 
-                            <label class="paid-check">
-                                <input type="checkbox" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.paid">
-                                <span>$</span>
+                            <label class="flex items-center justify-center gap-1">
+                                <input type="checkbox" class="h-4 w-4" wire:model.live="chart.children.{{ $childIndex }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.paid">
+                                <span class="paid-pill">$</span>
                             </label>
 
-                            <button type="button" class="danger" wire:click="deleteRow({{ $sectionIndex }}, {{ $rowIndex }})">Delete</button>
+                            <button type="button" class="btn btn-danger" wire:click="deleteRow({{ $sectionIndex }}, {{ $rowIndex }})">Delete</button>
                         </div>
                     @endforeach
                 </section>
             @endforeach
 
-            <div class="add-section">
-                <button type="button" wire:click="addSection">Add Section</button>
+            <div class="flex justify-center">
+                <button type="button" class="btn" wire:click="addSection">Add Section</button>
             </div>
 
-            <section class="panel section-editor">
-                <div class="section-heading">
-                    <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.weeklyChores.title">
-                    <div class="button-row">
-                        <button type="button" wire:click="addWeeklyRow('regular')">Add Weekly Chore</button>
-                        <button type="button" wire:click="addWeeklyRow('empty')">Add Empty</button>
+            <section class="panel">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <input type="text" class="field flex-1 min-w-[14rem] font-extrabold" wire:model.live="chart.children.{{ $childIndex }}.weeklyChores.title">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" class="btn" wire:click="addWeeklyRow('regular')">Add Weekly Chore</button>
+                        <button type="button" class="btn" wire:click="addWeeklyRow('empty')">Add Empty</button>
                     </div>
                 </div>
 
                 @foreach ($child['weeklyChores']['rows'] as $rowIndex => $row)
-                    <div class="weekly-editor-row" wire:key="weekly-editor-{{ $row['id'] }}">
-                        <select wire:model.live="chart.children.{{ $this->activeChildIndex() }}.weeklyChores.rows.{{ $rowIndex }}.type">
+                    <div class="grid items-center gap-2 border-t border-slate-100 py-2" wire:key="weekly-editor-{{ $row['id'] }}" style="grid-template-columns: {{ $weeklyRowGridCols }}">
+                        <select class="field" wire:model.live="chart.children.{{ $childIndex }}.weeklyChores.rows.{{ $rowIndex }}.type">
                             <option value="regular">Regular</option>
                             <option value="empty">Empty</option>
                         </select>
                         @if ($row['type'] === 'empty')
-                            <span class="empty-label">Empty box</span>
+                            <span class="font-bold text-slate-500">Empty box</span>
                         @else
-                            <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.weeklyChores.rows.{{ $rowIndex }}.label">
+                            <input type="text" class="field" wire:model.live="chart.children.{{ $childIndex }}.weeklyChores.rows.{{ $rowIndex }}.label">
                         @endif
-                        <label class="paid-check">
-                            <input type="checkbox" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.weeklyChores.rows.{{ $rowIndex }}.paid">
-                            <span>$</span>
+                        <label class="flex items-center justify-center gap-1">
+                            <input type="checkbox" class="h-4 w-4" wire:model.live="chart.children.{{ $childIndex }}.weeklyChores.rows.{{ $rowIndex }}.paid">
+                            <span class="paid-pill">$</span>
                         </label>
-                        <button type="button" class="danger" wire:click="deleteWeeklyRow({{ $rowIndex }})">Delete</button>
+                        <button type="button" class="btn btn-danger" wire:click="deleteWeeklyRow({{ $rowIndex }})">Delete</button>
                     </div>
                 @endforeach
             </section>
 
             <section class="panel">
-                <h2>Data</h2>
-                <div class="button-row">
-                    <button type="button" wire:click="exportJson">Export JSON</button>
-                    <button type="button" wire:click="importJson">Import JSON</button>
-                    <button type="button" wire:click="resetChart">Reset</button>
+                <h2 class="panel-label mb-3 text-base">Data</h2>
+                <div class="mb-2 flex flex-wrap items-center gap-2">
+                    <button type="button" class="btn" wire:click="exportJson">Export JSON</button>
+                    <button type="button" class="btn" wire:click="importJson">Import JSON</button>
+                    <button type="button" class="btn" wire:click="resetChart">Reset</button>
                 </div>
-                <textarea wire:model.live="jsonBuffer" rows="8" placeholder="Exported or imported chart JSON"></textarea>
+                <textarea class="field min-h-[10rem] resize-y" wire:model.live="jsonBuffer" rows="8" placeholder="Exported or imported chart JSON"></textarea>
             </section>
         </section>
 
-        <section class="preview-wrap {{ $viewMode !== 'preview' ? 'hidden-mode' : '' }}">
-            <article class="chart-preview {{ $child['orientation'] }}" id="printable-chart">
+        <section class="overflow-auto {{ $viewMode !== 'preview' ? 'hidden-mode' : '' }} {{ $viewMode === 'preview' ? 'max-w-[88rem] mx-auto' : '' }}">
+            <article class="chart-preview {{ $child['orientation'] }} mx-auto border border-slate-300 bg-white p-[0.34in] text-slate-950 shadow-xl {{ $child['orientation'] === 'portrait' ? 'w-[8.5in] min-h-[11in]' : 'w-[11in] min-h-[8.5in]' }}" id="printable-chart">
                 @php
                     $iconLegendRows = [];
                     $seenIconLegendRows = [];
@@ -582,11 +589,11 @@ new class extends Component
                     }
                 @endphp
 
-                <h2>{{ $child['childName'] }}'s Responsibility Chart</h2>
+                <h2 class="m-0 mb-5 text-center text-3xl font-extrabold leading-tight">{{ $child['childName'] }}'s Responsibility Chart</h2>
 
-                <div class="chart-grid">
+                <div class="grid gap-[5px] grid-cols-[repeat(21,minmax(0,1fr))]">
                     @foreach ($child['days'] as $day)
-                        <div class="day-header" style="grid-column: span 3; background-color: {{ $day['color'] }}">
+                        <div class="day-header flex items-center justify-center rounded-xl text-lg font-extrabold shadow-sm h-[0.36in]" style="grid-column: span 3; background-color: {{ $day['color'] }}">
                             {{ $day['label'] }}
                         </div>
                     @endforeach
@@ -607,21 +614,24 @@ new class extends Component
                             $iconGroups = array_chunk($iconRows, 3);
                         @endphp
 
-                        <div class="section-row" style="grid-column: 1 / -1">{{ $section['name'] }}</div>
+                        <div class="section-row mt-2 flex h-[0.3in] items-center rounded-xl bg-slate-100 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-500" style="grid-column: 1 / -1">{{ $section['name'] }}</div>
 
                         @foreach ($iconGroups as $iconGroup)
                             @foreach ($child['days'] as $day)
+                                @php
+                                    $visibleRows = array_values(array_filter(
+                                        $iconGroup,
+                                        fn ($r) => $r['days'][$day['key']] ?? false,
+                                    ));
+                                @endphp
                                 @for ($slot = 0; $slot < 3; $slot++)
-                                    @php
-                                        $row = $iconGroup[$slot] ?? null;
-                                        $visible = $row && ($row['days'][$day['key']] ?? false);
-                                    @endphp
+                                    @php($row = $visibleRows[$slot] ?? null)
                                     <div class="chart-cell icon-cell" style="background-color: {{ $day['color'] }}">
-                                        @if ($visible)
+                                        @if ($row)
                                             @if ($row['paid'])
                                                 <span class="paid-dot">$</span>
                                             @endif
-                                            <span class="icon-render svg-icon">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
+                                            <span class="icon-render inline-flex">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
                                         @endif
                                     </div>
                                 @endfor
@@ -643,15 +653,14 @@ new class extends Component
                         @endforeach
                     @endforeach
 
-                    <div class="section-row weekly-title" style="grid-column: 1 / -1">{{ $child['weeklyChores']['title'] }}</div>
-                    <div class="weekly-chores-grid">
+                    <div class="section-row mt-4 flex h-[0.3in] items-center rounded-xl bg-slate-100 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-500" style="grid-column: 1 / -1">{{ $child['weeklyChores']['title'] }}</div>
+                    <div class="grid gap-[5px] col-span-full {{ $child['orientation'] === 'portrait' ? 'grid-cols-2' : 'grid-cols-3' }}">
                         @foreach ($child['weeklyChores']['rows'] as $row)
                             <div class="chart-cell weekly-cell">
                                 @if ($row['paid'])
                                     <span class="paid-dot">$</span>
                                 @endif
-                                @if ($row['type'] === 'empty')
-                                @else
+                                @if ($row['type'] !== 'empty')
                                     <span>{{ $row['label'] }}</span>
                                 @endif
                             </div>
@@ -659,11 +668,11 @@ new class extends Component
                     </div>
 
                     @if ($iconLegendRows !== [])
-                        <div class="section-row icon-legend-title" style="grid-column: 1 / -1">Icon Chores</div>
-                        <div class="icon-legend">
+                        <div class="section-row mt-3 flex h-[0.3in] items-center rounded-xl bg-slate-100 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-500" style="grid-column: 1 / -1">Icon Chores</div>
+                        <div class="grid gap-[5px] col-span-full {{ $child['orientation'] === 'portrait' ? 'grid-cols-2' : 'grid-cols-3' }}">
                             @foreach ($iconLegendRows as $row)
-                                <div class="icon-legend-item">
-                                    <span class="icon-legend-symbol svg-icon">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
+                                <div class="flex items-center gap-1.5 rounded-lg border border-slate-300/80 bg-white px-[0.14in] py-[0.08in] text-[0.8rem] font-bold min-h-[0.34in]">
+                                    <span class="icon-legend-symbol inline-flex flex-none items-center justify-center">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
                                     <span>{{ $row['label'] }}</span>
                                 </div>
                             @endforeach
