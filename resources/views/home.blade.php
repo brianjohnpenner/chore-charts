@@ -8,7 +8,7 @@
         @livewireStyles
     </head>
     <body>
-        <livewire:chart-builder />
+        <livewire:chart-builder :chart="$chart ?? null" />
         @livewireScripts
     </body>
 </html>

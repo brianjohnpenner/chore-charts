@@ -1,10 +1,8 @@
 <?php
 
 use App\Models\ChoreChart;
-use App\Models\MagicLoginToken;
 use App\Support\ChoreCharts\ChartData;
 use Illuminate\Mail\Message;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -13,6 +11,8 @@ use Livewire\Component;
 
 new class extends Component
 {
+    public ?int $chartId = null;
+
     public array $chart = [];
 
     #[UrlAttribute(as: 'view', history: true, except: 'edit')]
@@ -26,13 +26,39 @@ new class extends Component
 
     public ?string $error = null;
 
-    public function mount(): void
-    {
-        $saved = Auth::user()?->choreChart;
+    public ?string $shareUrl = null;
 
-        $this->chart = $saved ? ChartData::normalize($saved->data) : ChartData::defaultChart();
-        $this->email = Auth::user()?->email ?? '';
+    public function mount(?ChoreChart $chart = null): void
+    {
+        if ($chart && $chart->exists) {
+            $this->chartId = $chart->id;
+            $this->chart = ChartData::normalize($chart->data);
+            $this->email = $chart->email ?? '';
+            $this->shareUrl = URL::signedRoute('chart.show', ['chart' => $chart->public_id]);
+        } else {
+            $this->chart = ChartData::defaultChart();
+        }
+
         $this->viewMode = in_array($this->viewMode, ['edit', 'preview'], true) ? $this->viewMode : 'edit';
+    }
+
+    public function updated(string $property): void
+    {
+        if ($this->chartId !== null && str_starts_with($property, 'chart')) {
+            $this->autosave();
+        }
+    }
+
+    private function autosave(): void
+    {
+        if ($this->chartId === null) {
+            return;
+        }
+
+        ChoreChart::where('id', $this->chartId)->update([
+            'title' => $this->activeChild()['childName'].' Chart',
+            'data' => ChartData::normalize($this->chart),
+        ]);
     }
 
     public function addChild(): void
@@ -116,50 +142,65 @@ new class extends Component
     {
         $this->clearMessages();
 
-        if (! Auth::check()) {
-            $this->sendMagicLink();
+        $email = $this->normalizedEmail();
+
+        $payload = [
+            'title' => $this->activeChild()['childName'].' Chart',
+            'email' => $email,
+            'data' => ChartData::normalize($this->chart),
+        ];
+
+        if ($this->chartId !== null) {
+            $chart = ChoreChart::find($this->chartId);
+
+            if ($chart) {
+                $chart->update($payload);
+                $this->shareUrl = URL::signedRoute('chart.show', ['chart' => $chart->public_id]);
+                $this->notice = 'Saved.';
+
+                return;
+            }
+        }
+
+        $chart = ChoreChart::create([
+            'public_id' => ChoreChart::newPublicId(),
+            ...$payload,
+        ]);
+
+        $this->chartId = $chart->id;
+        $this->shareUrl = URL::signedRoute('chart.show', ['chart' => $chart->public_id]);
+
+        $this->dispatch('chart-saved');
+        $this->redirect($this->shareUrl, navigate: true);
+    }
+
+    public function emailLink(): void
+    {
+        $this->clearMessages();
+
+        if ($this->shareUrl === null) {
+            $this->error = 'Save the chart first, then email yourself the link.';
 
             return;
         }
 
-        ChoreChart::updateOrCreate(
-            ['user_id' => Auth::id()],
-            [
-                'title' => $this->activeChild()['childName'].' Chart',
-                'data' => ChartData::normalize($this->chart),
-            ],
-        );
-
-        $this->notice = 'Saved.';
-    }
-
-    public function sendMagicLink(): void
-    {
-        $this->clearMessages();
         $validated = validator(['email' => $this->email], [
             'email' => ['required', 'email'],
         ])->validate();
 
-        $plainToken = Str::random(48);
+        $email = strtolower($validated['email']);
 
-        MagicLoginToken::create([
-            'email' => strtolower($validated['email']),
-            'token_hash' => hash('sha256', $plainToken),
-            'chart_data' => ChartData::normalize($this->chart),
-            'expires_at' => now()->addMinutes(30),
-        ]);
+        if ($this->chartId !== null) {
+            ChoreChart::where('id', $this->chartId)->update(['email' => $email]);
+        }
 
-        $url = URL::temporarySignedRoute(
-            'magic.consume',
-            now()->addMinutes(30),
-            ['token' => $plainToken],
-        );
+        $shareUrl = $this->shareUrl;
 
-        Mail::raw("Open this link to sign in and save your chore chart:\n\n{$url}\n\nThis link expires in 30 minutes.", function (Message $message) use ($validated): void {
-            $message->to($validated['email'])->subject('Your chore chart sign-in link');
+        Mail::raw("Open this link to view or edit your chore chart:\n\n{$shareUrl}", function (Message $message) use ($email): void {
+            $message->to($email)->subject('Your chore chart link');
         });
 
-        $this->notice = 'Magic link sent. In local development, check storage/logs/laravel.log.';
+        $this->notice = 'Link emailed. In local development, check storage/logs/laravel.log.';
     }
 
     public function exportJson(): void
@@ -257,14 +298,49 @@ new class extends Component
         $this->notice = null;
         $this->error = null;
     }
+
+    private function normalizedEmail(): ?string
+    {
+        $email = trim($this->email);
+
+        return $email === '' ? null : strtolower($email);
+    }
 };
 ?>
 
-<div class="app-shell">
+<div
+    class="app-shell"
+    x-data="{
+        isNew: @js($chartId === null),
+        draftKey: 'chore_chart_draft',
+        syncing: false,
+    }"
+    x-init="
+        if (isNew) {
+            const raw = localStorage.getItem(draftKey);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && Array.isArray(parsed.children)) {
+                        syncing = true;
+                        Promise.resolve($wire.set('chart', parsed)).finally(() => { syncing = false; });
+                    }
+                } catch (e) {
+                    localStorage.removeItem(draftKey);
+                }
+            }
+            $wire.$watch('chart', (value) => {
+                if (!isNew || syncing) return;
+                try { localStorage.setItem(draftKey, JSON.stringify(value)); } catch (e) {}
+            });
+        }
+    "
+    @chart-saved.window="localStorage.removeItem(draftKey); isNew = false;"
+>
     <header class="topbar no-print">
         <div>
             <h1>Chore Charts</h1>
-            <p>Build the chart, print it, and email yourself a magic link when you want it saved.</p>
+            <p>Build the chart, print it, and save to get a link you can come back to.</p>
         </div>
 
         <div class="topbar-actions">
@@ -274,39 +350,37 @@ new class extends Component
             </div>
             <button type="button" class="primary" onclick="window.print()">Print</button>
             <a class="topbar-link" href="{{ route('privacy') }}">Privacy</a>
-            @auth
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit">Sign out</button>
-                </form>
-            @endauth
         </div>
     </header>
 
-    @if (session('status') || $notice || $error)
+    @if ($notice || $error)
         <div class="status-line no-print {{ $error ? 'error' : '' }}">
-            {{ $error ?: session('status') ?: $notice }}
+            {{ $error ?: $notice }}
         </div>
     @endif
 
     <section class="save-strip no-print">
-        @auth
+        @if ($shareUrl)
             <div>
-                <strong>Signed in as {{ auth()->user()->email }}</strong>
-                <span>Your chart is private to this email address.</span>
+                <strong>Saved. Changes autosave.</strong>
+                <span>Bookmark this URL — it's the only way back to this chart.</span>
+                <input type="text" readonly class="share-url" value="{{ $shareUrl }}" onclick="this.select()">
             </div>
-            <button type="button" class="primary" wire:click="saveChart">Save Chart</button>
+            <div class="magic-form">
+                <input type="email" wire:model="email" placeholder="you@example.com">
+                <button type="button" wire:click="emailLink">Email Link</button>
+            </div>
+            @error('email') <span class="form-error">{{ $message }}</span> @enderror
         @else
             <div>
                 <strong>Want to save this chart?</strong>
-                <span>Enter your email and open the magic link. No password needed.</span>
+                <span>Save it to get a shareable link. Add an email if you'd like a copy of the link.</span>
             </div>
             <div class="magic-form">
-                <input type="email" wire:model.live="email" placeholder="you@example.com">
-                <button type="button" class="primary" wire:click="sendMagicLink">Send Link</button>
+                <input type="email" wire:model="email" placeholder="you@example.com (optional)">
+                <button type="button" class="primary" wire:click="saveChart">Save Chart</button>
             </div>
-            @error('email') <span class="form-error">{{ $message }}</span> @enderror
-        @endauth
+        @endif
     </section>
 
     @php

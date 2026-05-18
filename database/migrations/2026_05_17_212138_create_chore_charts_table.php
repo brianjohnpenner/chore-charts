@@ -6,23 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('chore_charts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->unique()->constrained()->cascadeOnDelete();
+            $table->string('public_id', 32)->unique();
+            $table->string('email')->nullable()->index();
             $table->string('title')->default('Chore Chart');
             $table->json('data');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('chore_charts');

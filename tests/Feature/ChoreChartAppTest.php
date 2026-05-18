@@ -3,9 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\ChoreChart;
-use App\Models\MagicLoginToken;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -14,7 +13,7 @@ class ChoreChartAppTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_home_page_loads_the_editor_toggle_and_anonymous_save_prompt(): void
+    public function test_home_page_loads_the_editor_toggle_and_save_prompt(): void
     {
         $this->get('/')
             ->assertOk()
@@ -22,34 +21,17 @@ class ChoreChartAppTest extends TestCase
             ->assertSee('Editor')
             ->assertSee('Print View')
             ->assertSee('Want to save this chart?')
-            ->assertSee('Send Link')
+            ->assertSee('Save Chart')
             ->assertSee('Privacy');
     }
 
-    public function test_privacy_policy_page_explains_saved_chart_data_and_magic_links(): void
+    public function test_privacy_policy_page_describes_saved_chart_data_and_share_links(): void
     {
         $this->get('/privacy')
             ->assertOk()
             ->assertSee('Privacy Policy')
-            ->assertSee('email address')
             ->assertSee('chore chart data')
-            ->assertSee('magic sign-in links');
-    }
-
-    public function test_guest_can_request_a_magic_link_that_captures_current_chart_data(): void
-    {
-        Livewire::test('chart-builder')
-            ->set('email', 'parent@example.com')
-            ->set('chart.children.0.childName', 'Molly')
-            ->call('sendMagicLink')
-            ->assertSet('notice', 'Magic link sent. In local development, check storage/logs/laravel.log.');
-
-        $token = MagicLoginToken::query()->firstOrFail();
-
-        $this->assertSame('parent@example.com', $token->email);
-        $this->assertNotNull($token->token_hash);
-        $this->assertTrue($token->expires_at->isFuture());
-        $this->assertSame('Molly', $token->chart_data['children'][0]['childName']);
+            ->assertSee('Shareable Chart Links');
     }
 
     public function test_view_mode_toggle_shows_only_editor_or_print_view(): void
@@ -124,62 +106,115 @@ class ChoreChartAppTest extends TestCase
         $this->assertStringContainsString('Dishwasher', $html);
     }
 
-    public function test_magic_link_signs_user_in_and_saves_the_pending_chart(): void
+    public function test_saving_a_new_chart_creates_a_row_and_redirects_to_its_signed_url(): void
     {
-        $plainToken = 'known-test-token';
+        $component = Livewire::test('chart-builder')
+            ->set('chart.children.0.childName', 'Molly')
+            ->call('saveChart');
 
-        MagicLoginToken::create([
-            'email' => 'parent@example.com',
-            'token_hash' => hash('sha256', $plainToken),
-            'chart_data' => $this->chartData('Molly'),
-            'expires_at' => now()->addMinutes(30),
-        ]);
-
-        $this->get(URL::temporarySignedRoute('magic.consume', now()->addMinutes(30), ['token' => $plainToken]))
-            ->assertRedirect(route('home'));
-
-        $this->assertAuthenticated();
-        $this->assertDatabaseHas('users', [
-            'email' => 'parent@example.com',
-        ]);
         $this->assertDatabaseCount('chore_charts', 1);
-        $this->assertSame('Molly', ChoreChart::firstOrFail()->data['children'][0]['childName']);
-        $this->assertNotNull(MagicLoginToken::firstOrFail()->used_at);
+        $chart = ChoreChart::firstOrFail();
+
+        $this->assertNotEmpty($chart->public_id);
+        $this->assertSame('Molly', $chart->data['children'][0]['childName']);
+        $this->assertNull($chart->email);
+
+        $component->assertRedirect(URL::signedRoute('chart.show', ['chart' => $chart->public_id]));
     }
 
-    public function test_magic_link_cannot_be_reused(): void
+    public function test_saving_with_an_email_stores_it_on_the_chart(): void
     {
-        $plainToken = 'used-test-token';
+        Livewire::test('chart-builder')
+            ->set('email', 'Parent@Example.com')
+            ->call('saveChart');
 
-        MagicLoginToken::create([
-            'email' => 'parent@example.com',
-            'token_hash' => hash('sha256', $plainToken),
-            'chart_data' => $this->chartData('Molly'),
-            'expires_at' => now()->addMinutes(30),
-            'used_at' => now(),
+        $chart = ChoreChart::firstOrFail();
+
+        $this->assertSame('parent@example.com', $chart->email);
+    }
+
+    public function test_signed_chart_url_loads_the_chart_for_editing(): void
+    {
+        $chart = ChoreChart::create([
+            'public_id' => 'abc123',
+            'title' => 'Molly Chart',
+            'data' => $this->chartData('Molly'),
         ]);
 
-        $this->get(URL::temporarySignedRoute('magic.consume', now()->addMinutes(30), ['token' => $plainToken]))
-            ->assertForbidden();
-
-        $this->assertGuest();
-        $this->assertDatabaseCount('users', 0);
-        $this->assertDatabaseCount('chore_charts', 0);
+        $this->get(URL::signedRoute('chart.show', ['chart' => $chart->public_id]))
+            ->assertOk()
+            ->assertSee('Molly');
     }
 
-    public function test_signed_in_user_can_save_chart_changes(): void
+    public function test_chart_url_without_a_valid_signature_is_forbidden(): void
     {
-        $user = User::factory()->create(['email' => 'parent@example.com']);
+        $chart = ChoreChart::create([
+            'public_id' => 'abc123',
+            'title' => 'Molly Chart',
+            'data' => $this->chartData('Molly'),
+        ]);
 
-        $this->actingAs($user);
+        $this->get('/c/'.$chart->public_id)->assertForbidden();
+    }
+
+    public function test_editing_a_saved_chart_autosaves_on_change(): void
+    {
+        $chart = ChoreChart::create([
+            'public_id' => 'abc123',
+            'title' => 'Molly Chart',
+            'data' => $this->chartData('Molly'),
+        ]);
+
+        Livewire::test('chart-builder', ['chart' => $chart])
+            ->set('chart.children.0.childName', 'Sam');
+
+        $this->assertSame('Sam', $chart->fresh()->data['children'][0]['childName']);
+    }
+
+    public function test_email_link_sends_a_mail_with_the_signed_url(): void
+    {
+        Mail::fake();
+
+        $chart = ChoreChart::create([
+            'public_id' => 'abc123',
+            'title' => 'Molly Chart',
+            'data' => $this->chartData('Molly'),
+        ]);
+
+        Livewire::test('chart-builder', ['chart' => $chart])
+            ->set('email', 'parent@example.com')
+            ->call('emailLink')
+            ->assertSet('notice', 'Link emailed. In local development, check storage/logs/laravel.log.');
+
+        Mail::assertSent(function ($mail): bool {
+            return $mail->hasTo('parent@example.com');
+        });
+
+        $this->assertSame('parent@example.com', $chart->fresh()->email);
+    }
+
+    public function test_email_link_fails_when_chart_has_not_been_saved(): void
+    {
+        Mail::fake();
 
         Livewire::test('chart-builder')
-            ->set('chart.children.0.childName', 'Molly')
-            ->call('saveChart')
-            ->assertSet('notice', 'Saved.');
+            ->set('email', 'parent@example.com')
+            ->call('emailLink')
+            ->assertSet('error', 'Save the chart first, then email yourself the link.');
 
-        $this->assertDatabaseCount('chore_charts', 1);
-        $this->assertSame('Molly', $user->choreChart()->firstOrFail()->data['children'][0]['childName']);
+        Mail::assertNothingSent();
+    }
+
+    public function test_unsaved_drafts_do_not_persist_server_side(): void
+    {
+        Livewire::test('chart-builder')
+            ->set('chart.children.0.childName', 'Molly');
+
+        $this->assertNull(session('chart_draft'));
+        $this->assertDatabaseCount('chore_charts', 0);
+
+        $reopened = Livewire::test('chart-builder');
+        $this->assertNotSame('Molly', $reopened->get('chart')['children'][0]['childName']);
     }
 
     private function chartData(string $childName): array

@@ -4,8 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
-#[Fillable(['user_id', 'title', 'data'])]
+#[Fillable(['public_id', 'email', 'title', 'data'])]
 class ChoreChart extends Model
 {
     protected function casts(): array
@@ -15,8 +16,17 @@ class ChoreChart extends Model
         ];
     }
 
-    public function user()
+    public function getRouteKeyName(): string
     {
-        return $this->belongsTo(User::class);
+        return 'public_id';
+    }
+
+    public static function newPublicId(): string
+    {
+        do {
+            $id = Str::lower(Str::random(16));
+        } while (self::where('public_id', $id)->exists());
+
+        return $id;
     }
 }

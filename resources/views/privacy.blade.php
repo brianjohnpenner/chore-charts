@@ -18,41 +18,42 @@
 
                 <p>
                     Chore Charts is a small app for creating printable household chore charts.
-                    This policy explains what information is used when you choose to save a chart
-                    with an emailed magic link.
+                    This policy explains what information is stored when you save a chart.
                 </p>
 
                 <h2>Information We Store</h2>
                 <p>
-                    If you use the app without signing in, your chart is only held in the current
-                    browser session. If you request a magic link, we store your email address and
-                    the chore chart data needed to restore your chart.
+                    While you are building a chart, the in-progress draft is held in your
+                    browser session. When you choose to save, the chore chart data is written
+                    to our database and you are given a private link to come back to it. If
+                    you provide an email address, it is stored alongside the chart so you can
+                    email yourself the link.
                 </p>
 
-                <h2>Magic Sign-In Links</h2>
+                <h2>Shareable Chart Links</h2>
                 <p>
-                    magic sign-in links are sent to the email address you provide. Each link is
-                    time-limited and can be used to sign in, create your account if needed, and save
-                    the chart attached to that request.
+                    Each saved chart has a signed URL. Anyone with that link can view and
+                    edit the chart, so treat it like a password and only share it with people
+                    you trust.
                 </p>
 
                 <h2>How We Use Information</h2>
                 <p>
-                    Your email address is used for sign-in and account lookup. Your chore chart data
-                    is used to display, edit, print, and save your chart. The app does not sell this
-                    information or use it for advertising.
+                    Your chore chart data is used to display, edit, print, and save your chart.
+                    If you provided an email address, it is used only to email you a copy of
+                    your chart link. The app does not sell this information or use it for
+                    advertising.
                 </p>
 
                 <h2>Data Retention</h2>
                 <p>
-                    Saved chart data remains associated with your email address until it is deleted
-                    from the application database. Expired or used magic-link records may remain in
-                    the database for operational troubleshooting until cleaned up by maintenance.
+                    Saved chart data remains in the database until it is deleted from the
+                    application database.
                 </p>
 
                 <h2>Local Development Email</h2>
                 <p>
-                    In local development, magic-link emails are written to Laravel's application log
+                    In local development, emails are written to Laravel's application log
                     instead of being sent through a real mail provider.
                 </p>
 
