@@ -2,17 +2,20 @@
 
 use App\Models\ChoreChart;
 use App\Models\MagicLoginToken;
+use App\Support\ChoreCharts\ChartData;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Url as UrlAttribute;
 use Livewire\Component;
 
 new class extends Component
 {
     public array $chart = [];
 
+    #[UrlAttribute(as: 'view', history: true, except: 'edit')]
     public string $viewMode = 'edit';
 
     public string $email = '';
@@ -23,20 +26,19 @@ new class extends Component
 
     public ?string $error = null;
 
-    private array $dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-
     public function mount(): void
     {
         $saved = Auth::user()?->choreChart;
 
-        $this->chart = $saved ? $this->normalizeChart($saved->data) : $this->defaultChart();
+        $this->chart = $saved ? ChartData::normalize($saved->data) : ChartData::defaultChart();
         $this->email = Auth::user()?->email ?? '';
+        $this->viewMode = in_array($this->viewMode, ['edit', 'preview'], true) ? $this->viewMode : 'edit';
     }
 
     public function addChild(): void
     {
         $name = 'Child '.(count($this->chart['children']) + 1);
-        $this->chart['children'][] = $this->defaultChild($name, $this->childIds());
+        $this->chart['children'][] = ChartData::defaultChild($name, $this->childIds());
         $this->chart['activeChildId'] = $this->chart['children'][array_key_last($this->chart['children'])]['id'];
     }
 
@@ -44,7 +46,7 @@ new class extends Component
     {
         $copy = $this->activeChild();
         $copy['childName'] .= ' Copy';
-        $copy['id'] = $this->uniqueSlug($copy['childName'], $this->childIds());
+        $copy['id'] = ChartData::uniqueSlug($copy['childName'], $this->childIds());
         $this->chart['children'][] = $copy;
         $this->chart['activeChildId'] = $copy['id'];
     }
@@ -83,7 +85,7 @@ new class extends Component
     public function addRow(int $sectionIndex, string $type): void
     {
         $childIndex = $this->activeChildIndex();
-        $this->chart['children'][$childIndex]['sections'][$sectionIndex]['rows'][] = $this->row($type);
+        $this->chart['children'][$childIndex]['sections'][$sectionIndex]['rows'][] = ChartData::row($type);
     }
 
     public function deleteRow(int $sectionIndex, int $rowIndex): void
@@ -98,7 +100,7 @@ new class extends Component
     public function addWeeklyRow(string $type): void
     {
         $childIndex = $this->activeChildIndex();
-        $this->chart['children'][$childIndex]['weeklyChores']['rows'][] = $this->weeklyRow($type);
+        $this->chart['children'][$childIndex]['weeklyChores']['rows'][] = ChartData::weeklyRow($type);
     }
 
     public function deleteWeeklyRow(int $rowIndex): void
@@ -124,7 +126,7 @@ new class extends Component
             ['user_id' => Auth::id()],
             [
                 'title' => $this->activeChild()['childName'].' Chart',
-                'data' => $this->normalizeChart($this->chart),
+                'data' => ChartData::normalize($this->chart),
             ],
         );
 
@@ -143,7 +145,7 @@ new class extends Component
         MagicLoginToken::create([
             'email' => strtolower($validated['email']),
             'token_hash' => hash('sha256', $plainToken),
-            'chart_data' => $this->normalizeChart($this->chart),
+            'chart_data' => ChartData::normalize($this->chart),
             'expires_at' => now()->addMinutes(30),
         ]);
 
@@ -162,7 +164,7 @@ new class extends Component
 
     public function exportJson(): void
     {
-        $this->jsonBuffer = json_encode($this->normalizeChart($this->chart), JSON_PRETTY_PRINT);
+        $this->jsonBuffer = json_encode(ChartData::normalize($this->chart), JSON_PRETTY_PRINT);
     }
 
     public function importJson(): void
@@ -176,13 +178,13 @@ new class extends Component
             return;
         }
 
-        $this->chart = $this->normalizeChart($decoded);
+        $this->chart = ChartData::normalize($decoded);
         $this->notice = 'Imported.';
     }
 
     public function resetChart(): void
     {
-        $this->chart = $this->defaultChart();
+        $this->chart = ChartData::defaultChart();
         $this->notice = 'Reset to defaults.';
     }
 
@@ -191,15 +193,45 @@ new class extends Component
         return $this->chart['children'][$this->activeChildIndex()] ?? $this->chart['children'][0];
     }
 
+    public function iconOptions(): array
+    {
+        $labels = [
+            'bed' => 'Bed',
+            'toothbrush' => 'Toothbrush',
+            'laundry' => 'Laundry',
+            'dishes' => 'Dishes',
+            'dishwasher' => 'Dishwasher',
+            'trash' => 'Trash',
+            'backpack' => 'Backpack',
+            'room' => 'Room',
+            'cat' => 'Cat',
+            'dog' => 'Dog',
+            'broom' => 'Broom',
+            'vacuum' => 'Vacuum',
+        ];
+
+        return array_intersect_key($labels, array_flip(ChartData::ICONS));
+    }
+
+    public function iconLabel(string $icon): string
+    {
+        return $this->iconOptions()[$icon] ?? Str::headline($icon);
+    }
+
     public function iconSvg(string $icon): string
     {
         return match ($icon) {
             'bed' => '<svg viewBox="0 0 24 24"><path d="M4 11V6a2 2 0 0 1 2-2h5a3 3 0 0 1 3 3v4"/><path d="M3 19v-8h18a2 2 0 0 1 2 2v6"/><path d="M3 16h20"/><path d="M7 19v-3"/><path d="M19 19v-3"/></svg>',
-            'toothbrush' => '<svg viewBox="0 0 24 24"><path d="m5 19 8-8"/><path d="m10 8 6-6 4 4-6 6"/><path d="m13 5 6 6"/><path d="M4 20l2-5 3 3Z"/></svg>',
+            'toothbrush' => '<svg viewBox="0 0 24 24"><path d="M4 20 15 9"/><path d="M14 6.5 17.5 3 21 6.5 17.5 10"/><path d="M15.5 4.5 19.5 8.5"/><path d="m5.5 18.5 2 2"/><path d="m12.5 9.5 2 2"/><path d="M18 3.5v2"/><path d="M20.5 6h-2"/></svg>',
             'laundry' => '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h.01"/><path d="M12 7h4"/><circle cx="12" cy="14" r="4"/><path d="M9 14c2 1.3 4 1.3 6 0"/></svg>',
             'dishes' => '<svg viewBox="0 0 24 24"><path d="M4 10a8 8 0 0 0 16 0Z"/><path d="M6 18h12"/><path d="M9 21h6"/><path d="M8 4v3"/><path d="M12 3v4"/><path d="M16 4v3"/></svg>',
+            'dishwasher' => '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M5 8h14"/><path d="M8 6h.01"/><path d="M12 6h4"/><path d="M8 12h8"/><path d="M8 16h8"/><path d="M10 12v4"/><path d="M14 12v4"/></svg>',
             'trash' => '<svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 14h8l1-14"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
             'backpack' => '<svg viewBox="0 0 24 24"><path d="M8 7V6a4 4 0 0 1 8 0v1"/><rect x="5" y="7" width="14" height="14" rx="3"/><path d="M8 13h8"/><path d="M9 17h6"/><path d="M5 12H3v5h2"/><path d="M19 12h2v5h-2"/></svg>',
+            'cat' => '<svg viewBox="0 0 24 24"><path d="M5 7 8 4l2 3h4l2-3 3 3v6a7 7 0 0 1-14 0Z"/><path d="M9 12h.01"/><path d="M15 12h.01"/><path d="M12 14v2"/><path d="M10 17h4"/><path d="M4 14H2"/><path d="M22 14h-2"/><path d="M4.5 17 2.5 18"/><path d="M19.5 17l2 1"/></svg>',
+            'dog' => '<svg viewBox="0 0 24 24"><path d="M6 10V6l4 3h4l4-3v4"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M9 13h.01"/><path d="M15 13h.01"/><path d="M12 15v2"/><path d="M10 18h4"/><path d="M7 10 4 8v5l3-1"/><path d="m17 10 3-2v5l-3-1"/></svg>',
+            'broom' => '<svg viewBox="0 0 24 24"><path d="M14 4 6 12"/><path d="m5 13 6 6"/><path d="M4 14c-1 2-1 4 0 6 2 1 4 1 6 0"/><path d="M6 16l-2 2"/><path d="M8 18l-2 2"/><path d="M12 6l6-4 2 2-4 6"/></svg>',
+            'vacuum' => '<svg viewBox="0 0 24 24"><path d="M6 18h10a4 4 0 0 0 0-8H9v8"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M14 10V6a3 3 0 0 1 6 0v7"/><path d="M3 20h18"/></svg>',
             default => '<svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
         };
     }
@@ -218,205 +250,6 @@ new class extends Component
     private function childIds(): array
     {
         return array_column($this->chart['children'] ?? [], 'id');
-    }
-
-    private function defaultChart(): array
-    {
-        $child = $this->defaultChild('Jack', []);
-
-        return [
-            'version' => 3,
-            'activeChildId' => $child['id'],
-            'children' => [$child],
-        ];
-    }
-
-    private function defaultChild(string $name, array $existingIds): array
-    {
-        return [
-            'id' => $this->uniqueSlug($name, $existingIds),
-            'childName' => $name,
-            'orientation' => 'landscape',
-            'days' => $this->defaultDays(),
-            'sections' => [
-                [
-                    'id' => 'morning',
-                    'name' => 'Morning',
-                    'rows' => [
-                        $this->row('icon', 'Make bed', 'bed'),
-                        $this->row('icon', 'Brush teeth', 'toothbrush'),
-                        $this->row('icon', 'Laundry', 'laundry'),
-                        $this->row('regular', 'Feed cat', 'room'),
-                    ],
-                ],
-                [
-                    'id' => 'daytime',
-                    'name' => 'Daytime',
-                    'rows' => [
-                        $this->row('regular', 'Put dishes away', 'dishes'),
-                        $this->row('empty'),
-                    ],
-                ],
-                [
-                    'id' => 'before-bed',
-                    'name' => 'Before Bed',
-                    'rows' => [
-                        $this->row('regular', 'Pick up room', 'room'),
-                        $this->row('empty'),
-                    ],
-                ],
-            ],
-            'weeklyChores' => [
-                'title' => 'Weekly Chores',
-                'rows' => [
-                    $this->weeklyRow('regular', 'Clean bedroom', true),
-                    $this->weeklyRow('regular', 'Put away laundry'),
-                    $this->weeklyRow('empty'),
-                    $this->weeklyRow('empty'),
-                ],
-            ],
-        ];
-    }
-
-    private function defaultDays(): array
-    {
-        return [
-            ['key' => 'sun', 'label' => 'Sun', 'color' => '#ded8ef'],
-            ['key' => 'mon', 'label' => 'Mon', 'color' => '#cfe0f8'],
-            ['key' => 'tue', 'label' => 'Tue', 'color' => '#fde6ca'],
-            ['key' => 'wed', 'label' => 'Wed', 'color' => '#f5c9cd'],
-            ['key' => 'thu', 'label' => 'Thu', 'color' => '#d2e2e6'],
-            ['key' => 'fri', 'label' => 'Fri', 'color' => '#dcefd7'],
-            ['key' => 'sat', 'label' => 'Sat', 'color' => '#fff2c7'],
-        ];
-    }
-
-    private function row(string $type, string $label = '', string $icon = 'room', bool $paid = false): array
-    {
-        return [
-            'id' => $type.'-'.Str::random(8),
-            'type' => in_array($type, ['icon', 'regular', 'empty'], true) ? $type : 'regular',
-            'label' => $label,
-            'icon' => $icon,
-            'paid' => $paid,
-            'days' => array_fill_keys($this->dayKeys, true),
-        ];
-    }
-
-    private function weeklyRow(string $type, string $label = '', bool $paid = false): array
-    {
-        return [
-            'id' => 'weekly-'.$type.'-'.Str::random(8),
-            'type' => $type === 'empty' ? 'empty' : 'regular',
-            'label' => $label,
-            'paid' => $paid,
-        ];
-    }
-
-    private function normalizeChart(array $chart): array
-    {
-        if (! isset($chart['children']) || ! is_array($chart['children']) || count($chart['children']) === 0) {
-            return $this->defaultChart();
-        }
-
-        $children = [];
-        $ids = [];
-
-        foreach ($chart['children'] as $child) {
-            $name = trim((string) ($child['childName'] ?? 'Child')) ?: 'Child';
-            $id = $this->uniqueSlug($child['id'] ?? $name, $ids);
-            $ids[] = $id;
-
-            $children[] = [
-                'id' => $id,
-                'childName' => $name,
-                'orientation' => ($child['orientation'] ?? 'landscape') === 'portrait' ? 'portrait' : 'landscape',
-                'days' => $this->normalizeDays($child['days'] ?? []),
-                'sections' => $this->normalizeSections($child['sections'] ?? []),
-                'weeklyChores' => $this->normalizeWeekly($child['weeklyChores'] ?? []),
-            ];
-        }
-
-        $activeId = $chart['activeChildId'] ?? $children[0]['id'];
-
-        return [
-            'version' => 3,
-            'activeChildId' => in_array($activeId, array_column($children, 'id'), true) ? $activeId : $children[0]['id'],
-            'children' => $children,
-        ];
-    }
-
-    private function normalizeDays(array $days): array
-    {
-        $defaults = $this->defaultDays();
-
-        return array_map(function (array $default) use ($days): array {
-            $incoming = collect($days)->firstWhere('key', $default['key']) ?? [];
-
-            return [
-                'key' => $default['key'],
-                'label' => trim((string) ($incoming['label'] ?? $default['label'])) ?: $default['label'],
-                'color' => preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($incoming['color'] ?? '')) ? $incoming['color'] : $default['color'],
-            ];
-        }, $defaults);
-    }
-
-    private function normalizeSections(array $sections): array
-    {
-        if ($sections === []) {
-            return $this->defaultChild('Child', [])['sections'];
-        }
-
-        return array_values(array_map(fn (array $section): array => [
-            'id' => (string) ($section['id'] ?? 'section-'.Str::random(8)),
-            'name' => trim((string) ($section['name'] ?? 'Section')) ?: 'Section',
-            'rows' => $this->normalizeRows($section['rows'] ?? []),
-        ], $sections));
-    }
-
-    private function normalizeRows(array $rows): array
-    {
-        return array_values(array_map(function (array $row): array {
-            $normalized = $this->row($row['type'] ?? 'regular');
-            $normalized['id'] = (string) ($row['id'] ?? $normalized['id']);
-            $normalized['label'] = (string) ($row['label'] ?? '');
-            $normalized['icon'] = in_array(($row['icon'] ?? 'room'), ['bed', 'toothbrush', 'laundry', 'dishes', 'trash', 'backpack', 'room'], true) ? $row['icon'] : 'room';
-            $normalized['paid'] = (bool) ($row['paid'] ?? false);
-            $normalized['days'] = array_merge(array_fill_keys($this->dayKeys, true), array_intersect_key((array) ($row['days'] ?? []), array_fill_keys($this->dayKeys, true)));
-
-            return $normalized;
-        }, $rows));
-    }
-
-    private function normalizeWeekly(array $weekly): array
-    {
-        $rows = $weekly['rows'] ?? [];
-
-        return [
-            'title' => trim((string) ($weekly['title'] ?? 'Weekly Chores')) ?: 'Weekly Chores',
-            'rows' => array_values(array_map(function (array $row): array {
-                $normalized = $this->weeklyRow($row['type'] ?? 'regular');
-                $normalized['id'] = (string) ($row['id'] ?? $normalized['id']);
-                $normalized['label'] = (string) ($row['label'] ?? '');
-                $normalized['paid'] = (bool) ($row['paid'] ?? false);
-
-                return $normalized;
-            }, is_array($rows) ? $rows : [])),
-        ];
-    }
-
-    private function uniqueSlug(string $value, array $existingIds): string
-    {
-        $base = Str::slug($value) ?: 'child';
-        $slug = $base;
-        $i = 2;
-
-        while (in_array($slug, $existingIds, true)) {
-            $slug = "{$base}-{$i}";
-            $i++;
-        }
-
-        return $slug;
     }
 
     private function clearMessages(): void
@@ -476,7 +309,9 @@ new class extends Component
         @endauth
     </section>
 
-    @php($child = $this->activeChild())
+    @php
+        $child = $this->activeChild();
+    @endphp
 
     <main class="workspace {{ $viewMode === 'preview' ? 'preview-only' : '' }}">
         <section class="editor no-print {{ $viewMode !== 'edit' ? 'hidden-mode' : '' }}">
@@ -555,19 +390,28 @@ new class extends Component
 
                             <div class="chore-fields">
                                 @if ($row['type'] === 'icon')
-                                    <select wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.icon">
-                                        <option value="bed">Bed</option>
-                                        <option value="toothbrush">Toothbrush</option>
-                                        <option value="laundry">Laundry</option>
-                                        <option value="dishes">Dishes</option>
-                                        <option value="trash">Trash</option>
-                                        <option value="backpack">Backpack</option>
-                                        <option value="room">Room</option>
-                                    </select>
+                                    <details class="icon-picker">
+                                        <summary>
+                                            <span class="icon-picker-symbol svg-icon">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
+                                            <span>{{ $this->iconLabel($row['icon'] ?? 'room') }}</span>
+                                        </summary>
+                                        <div class="icon-picker-menu">
+                                            @foreach ($this->iconOptions() as $icon => $label)
+                                                <button
+                                                    type="button"
+                                                    class="{{ ($row['icon'] ?? 'room') === $icon ? 'selected' : '' }}"
+                                                    wire:click="$set('chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.icon', '{{ $icon }}')"
+                                                >
+                                                    <span class="icon-picker-symbol svg-icon">{!! $this->iconSvg($icon) !!}</span>
+                                                    <span>{{ $label }}</span>
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </details>
                                 @endif
 
                                 @if ($row['type'] === 'empty')
-                                    <span class="empty-label">Empty write-in line</span>
+                                    <span class="empty-label">Empty box</span>
                                 @else
                                     <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.sections.{{ $sectionIndex }}.rows.{{ $rowIndex }}.label" placeholder="Chore label">
                                 @endif
@@ -610,7 +454,7 @@ new class extends Component
                             <option value="empty">Empty</option>
                         </select>
                         @if ($row['type'] === 'empty')
-                            <span class="empty-label">Empty write-in line</span>
+                            <span class="empty-label">Empty box</span>
                         @else
                             <input type="text" wire:model.live="chart.children.{{ $this->activeChildIndex() }}.weeklyChores.rows.{{ $rowIndex }}.label">
                         @endif
@@ -636,61 +480,122 @@ new class extends Component
 
         <section class="preview-wrap {{ $viewMode !== 'preview' ? 'hidden-mode' : '' }}">
             <article class="chart-preview {{ $child['orientation'] }}" id="printable-chart">
+                @php
+                    $iconLegendRows = [];
+                    $seenIconLegendRows = [];
+
+                    foreach ($child['sections'] as $section) {
+                        foreach ($section['rows'] as $row) {
+                            if ($row['type'] !== 'icon') {
+                                continue;
+                            }
+
+                            $label = trim((string) ($row['label'] ?? ''));
+
+                            if ($label === '') {
+                                continue;
+                            }
+
+                            $legendKey = ($row['icon'] ?? 'room').'|'.$label;
+
+                            if (isset($seenIconLegendRows[$legendKey])) {
+                                continue;
+                            }
+
+                            $seenIconLegendRows[$legendKey] = true;
+                            $iconLegendRows[] = $row;
+                        }
+                    }
+                @endphp
+
                 <h2>{{ $child['childName'] }}'s Responsibility Chart</h2>
 
-                <div class="chart-grid" style="--day-count: {{ count($child['days']) }}">
+                <div class="chart-grid">
                     @foreach ($child['days'] as $day)
-                        <div class="day-column" style="--day-color: {{ $day['color'] }}">
-                            <h3>{{ $day['label'] }}</h3>
-
-                            @foreach ($child['sections'] as $section)
-                                <div class="preview-section">
-                                    <h4>{{ $section['name'] }}</h4>
-
-                                    <div class="preview-icons">
-                                        @foreach ($section['rows'] as $row)
-                                            @if ($row['type'] === 'icon' && ($row['days'][$day['key']] ?? false))
-                                                <div class="preview-icon">
-                                                    {!! $this->iconSvg($row['icon'] ?? 'room') !!}
-                                                    @if ($row['paid']) <span class="paid-dot">$</span> @endif
-                                                    @if ($row['label']) <small>{{ $row['label'] }}</small> @endif
-                                                </div>
-                                            @endif
-                                        @endforeach
-                                    </div>
-
-                                    @foreach ($section['rows'] as $row)
-                                        @continue($row['type'] === 'icon' || ! ($row['days'][$day['key']] ?? false))
-                                        <div class="preview-row {{ $row['type'] === 'empty' ? 'write-in' : '' }}">
-                                            @if ($row['type'] === 'empty')
-                                                <span></span>
-                                            @else
-                                                <span>{{ $row['label'] }}</span>
-                                            @endif
-                                            @if ($row['paid']) <span class="paid-dot">$</span> @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endforeach
+                        <div class="day-header" style="grid-column: span 3; background-color: {{ $day['color'] }}">
+                            {{ $day['label'] }}
                         </div>
                     @endforeach
-                </div>
 
-                <section class="weekly-preview">
-                    <h3>{{ $child['weeklyChores']['title'] }}</h3>
-                    <div class="weekly-preview-grid">
+                    @foreach ($child['sections'] as $section)
+                        @php
+                            $iconRows = [];
+                            $detailRows = [];
+
+                            foreach ($section['rows'] as $sectionRow) {
+                                if ($sectionRow['type'] === 'icon') {
+                                    $iconRows[] = $sectionRow;
+                                } else {
+                                    $detailRows[] = $sectionRow;
+                                }
+                            }
+
+                            $iconGroups = array_chunk($iconRows, 3);
+                        @endphp
+
+                        <div class="section-row" style="grid-column: 1 / -1">{{ $section['name'] }}</div>
+
+                        @foreach ($iconGroups as $iconGroup)
+                            @foreach ($child['days'] as $day)
+                                @for ($slot = 0; $slot < 3; $slot++)
+                                    @php
+                                        $row = $iconGroup[$slot] ?? null;
+                                        $visible = $row && ($row['days'][$day['key']] ?? false);
+                                    @endphp
+                                    <div class="chart-cell icon-cell" style="background-color: {{ $day['color'] }}">
+                                        @if ($visible)
+                                            @if ($row['paid'])
+                                                <span class="paid-dot">$</span>
+                                            @endif
+                                            <span class="icon-render svg-icon">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
+                                        @endif
+                                    </div>
+                                @endfor
+                            @endforeach
+                        @endforeach
+
+                        @foreach ($detailRows as $row)
+                            @foreach ($child['days'] as $day)
+                                @php($visible = $row['days'][$day['key']] ?? false)
+                                <div class="chart-cell {{ $row['type'] === 'empty' ? 'write-cell' : 'text-cell' }}" style="grid-column: span 3; background-color: {{ $day['color'] }}">
+                                    @if ($visible && $row['paid'])
+                                        <span class="paid-dot">$</span>
+                                    @endif
+                                    @if ($visible && $row['type'] === 'regular')
+                                        <span>{{ $row['label'] }}</span>
+                                    @endif
+                                </div>
+                            @endforeach
+                        @endforeach
+                    @endforeach
+
+                    <div class="section-row weekly-title" style="grid-column: 1 / -1">{{ $child['weeklyChores']['title'] }}</div>
+                    <div class="weekly-chores-grid">
                         @foreach ($child['weeklyChores']['rows'] as $row)
-                            <div class="preview-row {{ $row['type'] === 'empty' ? 'write-in' : '' }}">
+                            <div class="chart-cell weekly-cell">
+                                @if ($row['paid'])
+                                    <span class="paid-dot">$</span>
+                                @endif
                                 @if ($row['type'] === 'empty')
-                                    <span></span>
                                 @else
                                     <span>{{ $row['label'] }}</span>
                                 @endif
-                                @if ($row['paid']) <span class="paid-dot">$</span> @endif
                             </div>
                         @endforeach
                     </div>
-                </section>
+
+                    @if ($iconLegendRows !== [])
+                        <div class="section-row icon-legend-title" style="grid-column: 1 / -1">Icon Chores</div>
+                        <div class="icon-legend">
+                            @foreach ($iconLegendRows as $row)
+                                <div class="icon-legend-item">
+                                    <span class="icon-legend-symbol svg-icon">{!! $this->iconSvg($row['icon'] ?? 'room') !!}</span>
+                                    <span>{{ $row['label'] }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </article>
         </section>
     </main>

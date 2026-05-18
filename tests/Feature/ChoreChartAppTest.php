@@ -65,6 +65,65 @@ class ChoreChartAppTest extends TestCase
         $this->assertStringNotContainsString('preview-wrap hidden-mode', $component->html());
     }
 
+    public function test_preview_view_can_be_loaded_from_the_url(): void
+    {
+        $this->get('/?view=preview')
+            ->assertOk()
+            ->assertSee('editor no-print hidden-mode', false)
+            ->assertDontSee('preview-wrap hidden-mode', false);
+    }
+
+    public function test_weekly_chores_render_inside_an_orientation_aware_grid(): void
+    {
+        $component = Livewire::test('chart-builder')
+            ->set('viewMode', 'preview');
+
+        $this->assertStringContainsString('weekly-chores-grid', $component->html());
+        $this->assertStringContainsString('chart-preview landscape', $component->html());
+
+        $component->set('chart.children.0.orientation', 'portrait');
+
+        $this->assertStringContainsString('chart-preview portrait', $component->html());
+        $this->assertStringContainsString('weekly-chores-grid', $component->html());
+    }
+
+    public function test_print_view_includes_an_icon_chore_legend(): void
+    {
+        $html = Livewire::test('chart-builder')
+            ->set('viewMode', 'preview')
+            ->html();
+
+        $this->assertStringContainsString('icon-legend', $html);
+        $this->assertStringContainsString('Icon Chores', $html);
+        $this->assertStringContainsString('Make bed', $html);
+        $this->assertStringContainsString('Brush teeth', $html);
+        $this->assertStringContainsString('Laundry', $html);
+    }
+
+    public function test_empty_chore_boxes_render_without_write_in_lines(): void
+    {
+        $html = Livewire::test('chart-builder')
+            ->set('viewMode', 'preview')
+            ->html();
+
+        $this->assertStringContainsString('write-cell', $html);
+        $this->assertStringNotContainsString('write-line', $html);
+    }
+
+    public function test_editor_icon_picker_shows_icons_with_names(): void
+    {
+        $html = Livewire::test('chart-builder')->html();
+
+        $this->assertStringContainsString('icon-picker', $html);
+        $this->assertStringContainsString('icon-picker-symbol', $html);
+        $this->assertStringContainsString('Toothbrush', $html);
+        $this->assertStringContainsString('Cat', $html);
+        $this->assertStringContainsString('Dog', $html);
+        $this->assertStringContainsString('Broom', $html);
+        $this->assertStringContainsString('Vacuum', $html);
+        $this->assertStringContainsString('Dishwasher', $html);
+    }
+
     public function test_magic_link_signs_user_in_and_saves_the_pending_chart(): void
     {
         $plainToken = 'known-test-token';
