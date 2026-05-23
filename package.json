@@ -1,7 +1,8 @@
 {
   "scripts": {
-    "build:css": "tailwindcss -i ./assets/tailwind.css -o ./assets/app.css --content ./index.html ./assets/**/*.js",
-    "watch:css": "tailwindcss -i ./assets/tailwind.css -o ./assets/app.css --content ./index.html ./assets/**/*.js --watch"
+    "test:pwa": "node tests/pwa-storage.test.mjs",
+    "build": "tailwindcss -i ./assets/tailwind.css -o ./assets/app.css --content ./index.html ./assets/**/*.js",
+    "watch": "tailwindcss -i ./assets/tailwind.css -o ./assets/app.css --content ./index.html ./assets/**/*.js --watch"
   },
   "devDependencies": {
     "tailwindcss": "^3.4.17"

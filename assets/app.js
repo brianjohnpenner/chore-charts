@@ -1,10 +1,101 @@
 (function () {
-  const STORAGE_KEY = "chore-chart:v6";
+  const DB_NAME = "chore-chart-db";
+  const DB_VERSION = 1;
+  const STORE_NAME = "app-state";
+  const CHART_KEY = "active-chart";
+  const FILE_HANDLE_KEY = "json-file-handle";
   const CHART_VERSION = 2;
   const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
   const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const DAY_COLORS = ["#ded8ef", "#cfe0f8", "#fde6ca", "#f5c9cd", "#d2e2e6", "#dcefd7", "#fff2c7"];
   const ROW_TYPES = ["icon", "regular", "empty"];
+
+  function openChartDatabase() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  function readStoredValue(key) {
+    return openChartDatabase().then((db) => new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, "readonly");
+      const request = transaction.objectStore(STORE_NAME).get(key);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => db.close();
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error);
+      };
+    }));
+  }
+
+  function writeStoredValue(key, value) {
+    return openChartDatabase().then((db) => new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, "readwrite");
+      const request = transaction.objectStore(STORE_NAME).put(value, key);
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error);
+      };
+    }));
+  }
+
+  async function loadStoredChart() {
+    try {
+      const stored = await readStoredValue(CHART_KEY);
+      if (stored) return normalizeChart(stored);
+
+      const chart = defaultChart();
+      await saveStoredChart(chart);
+      return chart;
+    } catch (error) {
+      console.error("Could not load chart data from IndexedDB.", error);
+      return defaultChart();
+    }
+  }
+
+  async function saveStoredChart(chart) {
+    await writeStoredValue(CHART_KEY, normalizeChart(clone(chart)));
+  }
+
+  async function loadFileHandle() {
+    try {
+      return await readStoredValue(FILE_HANDLE_KEY);
+    } catch (error) {
+      console.error("Could not load JSON file handle.", error);
+      return null;
+    }
+  }
+
+  async function saveFileHandle(handle) {
+    try {
+      await writeStoredValue(FILE_HANDLE_KEY, handle);
+    } catch (error) {
+      console.error("Could not remember JSON file handle.", error);
+    }
+  }
+
+  function debounce(callback, delay = 400) {
+    let timeout;
+    return (...args) => {
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => callback(...args), delay);
+    };
+  }
 
   function uid(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -20,6 +111,29 @@
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  function chartJson(chart) {
+    return JSON.stringify(normalizeChart(clone(chart)), null, 2);
+  }
+
+  function filePickerTypes() {
+    return [{
+      description: "Chore chart JSON",
+      accept: { "application/json": [".json"] }
+    }];
+  }
+
+  async function verifyFilePermission(handle, mode = "readwrite") {
+    if (!handle || !handle.queryPermission || !handle.requestPermission) return false;
+    if (await handle.queryPermission({ mode }) === "granted") return true;
+    return await handle.requestPermission({ mode }) === "granted";
+  }
+
+  async function writeJsonFile(handle, chart) {
+    const writable = await handle.createWritable();
+    await writable.write(new Blob([chartJson(chart)], { type: "application/json" }));
+    await writable.close();
   }
 
   function days() {
@@ -277,13 +391,34 @@
 
   document.addEventListener("alpine:init", () => {
     Alpine.data("choreChartApp", () => ({
-      chart: Alpine.$persist(defaultChart()).as(STORAGE_KEY),
+      chart: defaultChart(),
+      fileHandle: null,
       importError: "",
+      dataStatus: "",
+      saveChartDebounced: null,
+      storageReady: false,
       printMode: "selected",
       viewMode: new URLSearchParams(window.location.search).get("view") === "preview" ? "preview" : "edit",
 
-      init() {
-        this.chart = normalizeChart(this.chart);
+      async init() {
+        this.saveChartDebounced = debounce(async (chart) => {
+          try {
+            await saveStoredChart(chart);
+            this.dataStatus = "Saved in this browser.";
+          } catch (error) {
+            console.error("Could not save chart data to IndexedDB.", error);
+            this.importError = "Could not save changes in this browser.";
+          }
+        });
+
+        this.chart = await loadStoredChart();
+        this.fileHandle = await loadFileHandle();
+        this.storageReady = true;
+
+        this.$watch("chart", (chart) => {
+          if (!this.storageReady) return;
+          this.saveChartDebounced(chart);
+        });
       },
 
       get activeChild() {
@@ -453,14 +588,97 @@
         if (row.type === "empty") row.label = "";
       },
 
-      exportJson() {
-        const blob = new Blob([JSON.stringify(this.chart, null, 2)], { type: "application/json" });
+      suggestedFileName() {
+        return `${slugify(this.activeChild.childName)}-chore-chart.json`;
+      },
+
+      downloadJson() {
+        const blob = new Blob([chartJson(this.chart)], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "chore-chart.json";
+        link.download = this.suggestedFileName();
         link.click();
         URL.revokeObjectURL(url);
+        this.dataStatus = "Downloaded JSON file.";
+      },
+
+      async saveJson() {
+        this.importError = "";
+        if (!this.fileHandle || !(await verifyFilePermission(this.fileHandle, "readwrite"))) {
+          await this.saveJsonAs();
+          return;
+        }
+
+        try {
+          await writeJsonFile(this.fileHandle, this.chart);
+          await saveStoredChart(this.chart);
+          this.dataStatus = `Saved ${this.fileHandle.name || "JSON file"}.`;
+        } catch (error) {
+          console.error("Could not save JSON file.", error);
+          this.importError = "Could not save JSON file.";
+        }
+      },
+
+      async saveJsonAs() {
+        this.importError = "";
+        if (!window.showSaveFilePicker) {
+          this.downloadJson();
+          return;
+        }
+
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: this.suggestedFileName(),
+            types: filePickerTypes()
+          });
+          await writeJsonFile(handle, this.chart);
+          this.fileHandle = handle;
+          await saveFileHandle(handle);
+          await saveStoredChart(this.chart);
+          this.dataStatus = `Saved ${handle.name || "JSON file"}.`;
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          console.error("Could not save JSON file.", error);
+          this.importError = "Could not save JSON file.";
+        }
+      },
+
+      async openJsonFile() {
+        this.importError = "";
+        if (!window.showOpenFilePicker) {
+          this.$refs.jsonFileInput.click();
+          return;
+        }
+
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            multiple: false,
+            types: filePickerTypes()
+          });
+          const file = await handle.getFile();
+          await this.applyImportedJson(await file.text());
+          this.fileHandle = handle;
+          await saveFileHandle(handle);
+          this.dataStatus = `Opened ${handle.name || "JSON file"}.`;
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          console.error("Could not open JSON file.", error);
+          this.importError = "Could not open JSON file.";
+        }
+      },
+
+      async applyImportedJson(contents) {
+        const parsed = normalizeChart(JSON.parse(contents));
+        const error = validateChart(parsed);
+        if (error) {
+          this.importError = error;
+          return false;
+        }
+        this.chart = parsed;
+        await saveStoredChart(parsed);
+        this.dataStatus = "Imported JSON file.";
+        return true;
       },
 
       importJson(event) {
@@ -468,15 +686,9 @@
         this.importError = "";
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => {
+        reader.onload = async () => {
           try {
-            const parsed = normalizeChart(JSON.parse(reader.result));
-            const error = validateChart(parsed);
-            if (error) {
-              this.importError = error;
-              return;
-            }
-            this.chart = parsed;
+            await this.applyImportedJson(reader.result);
           } catch (error) {
             this.importError = "Imported file is not valid JSON.";
           } finally {
@@ -489,6 +701,14 @@
       resetToDefaults() {
         if (!window.confirm("Reset all saved chore charts?")) return;
         this.chart = defaultChart();
+        saveStoredChart(this.chart)
+          .then(() => {
+            this.dataStatus = "Reset to default chart.";
+          })
+          .catch((error) => {
+            console.error("Could not reset chart data in IndexedDB.", error);
+            this.importError = "Could not reset saved chart data.";
+          });
       },
 
       printChart(mode = "selected") {
@@ -501,6 +721,16 @@
   window.ChoreChartDefaults = {
     defaultChart,
     defaultChildChart,
-    validateChart
+    validateChart,
+    loadStoredChart,
+    saveStoredChart
   };
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch((error) => {
+        console.error("Could not register service worker.", error);
+      });
+    });
+  }
 })();

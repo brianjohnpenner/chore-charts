@@ -129,6 +129,10 @@
     @apply absolute inset-0 cursor-pointer opacity-0;
   }
 
+  .data-status {
+    @apply mt-2 text-sm text-slate-600;
+  }
+
   .segmented {
     @apply inline-grid grid-cols-2 rounded-md border border-slate-300 bg-slate-100 p-1;
   }

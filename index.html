@@ -3,13 +3,15 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0f172a">
     <title>Chore Charts</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="assets/icon-192.svg" type="image/svg+xml">
     <script defer src="assets/icons.js?v=7"></script>
-    <script defer src="assets/app.js?v=7"></script>
+    <script defer src="assets/app.js?v=8"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=7">
+    <link rel="stylesheet" href="assets/app.css?v=8">
   </head>
   <body class="bg-slate-100 text-slate-950">
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
@@ -209,13 +211,17 @@
         <section class="control-section">
           <h2>Data</h2>
           <div class="button-row">
-            <button type="button" @click="exportJson">Export JSON</button>
+            <button type="button" @click="saveJson">Save JSON</button>
+            <button type="button" @click="saveJsonAs">Save As</button>
+            <button type="button" @click="openJsonFile">Open JSON</button>
+            <button type="button" @click="downloadJson">Download JSON</button>
             <label class="file-button">
               Import JSON
-              <input type="file" accept="application/json" @change="importJson">
+              <input x-ref="jsonFileInput" type="file" accept="application/json,.json" @change="importJson">
             </label>
             <button type="button" @click="resetToDefaults">Reset</button>
           </div>
+          <p class="data-status" x-show="dataStatus" x-text="dataStatus"></p>
           <p class="text-sm text-red-700" x-show="importError" x-text="importError"></p>
         </section>
       </section>
