@@ -1,4 +1,4 @@
-const CACHE_NAME = "chore-charts-v1";
+const CACHE_NAME = "chore-charts-v15";
 const APP_SHELL = [
   "./",
   "index.html",
@@ -30,7 +30,7 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+    caches.match(event.request, event.request.mode === "navigate" ? { ignoreSearch: true } : undefined).then((cached) => {
       if (cached) return cached;
 
       return fetch(event.request).then((response) => {

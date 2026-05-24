@@ -13,7 +13,9 @@
     grip: `<svg ${svgAttrs}><circle cx="18" cy="14" r="1.5" stroke-width="3"/><circle cx="30" cy="14" r="1.5" stroke-width="3"/><circle cx="18" cy="24" r="1.5" stroke-width="3"/><circle cx="30" cy="24" r="1.5" stroke-width="3"/><circle cx="18" cy="34" r="1.5" stroke-width="3"/><circle cx="30" cy="34" r="1.5" stroke-width="3"/></svg>`,
     arrowUp: `<svg ${svgAttrs}><path d="M24 38V10M12 22l12-12 12 12" stroke-width="3.5"/></svg>`,
     arrowDown: `<svg ${svgAttrs}><path d="M24 10v28M12 26l12 12 12-12" stroke-width="3.5"/></svg>`,
-    delete: `<svg ${svgAttrs}><path d="M14 15h20l-2 26H16zM11 15h26M19 15v-5h10v5M20 22v12M28 22v12" stroke-width="3"/></svg>`
+    plus: `<svg ${svgAttrs}><path d="M24 10v28M10 24h28" stroke-width="3.5"/></svg>`,
+    delete: `<svg ${svgAttrs}><path d="M14 15h20l-2 26H16zM11 15h26M19 15v-5h10v5M20 22v12M28 22v12" stroke-width="3"/></svg>`,
+    close: `<svg ${svgAttrs}><path d="M14 14l20 20M34 14 14 34" stroke-width="3.5"/></svg>`
   };
 
   const svgOptions = [

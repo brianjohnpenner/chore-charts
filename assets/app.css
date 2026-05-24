@@ -690,6 +690,81 @@ button,
   }
 }
 
+.install-prompt {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-radius: 0.5rem;
+  border-width: 1px;
+  --tw-border-opacity: 1;
+  border-color: rgb(167 243 208 / var(--tw-border-opacity, 1));
+  --tw-bg-opacity: 1;
+  background-color: rgb(236 253 245 / var(--tw-bg-opacity, 1));
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  --tw-text-opacity: 1;
+  color: rgb(2 44 34 / var(--tw-text-opacity, 1));
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.install-copy {
+  min-width: 0px;
+  flex: 1 1 0%;
+}
+
+.install-copy h2 {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+
+.install-copy p {
+  margin-top: 0.125rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  --tw-text-opacity: 1;
+  color: rgb(6 78 59 / var(--tw-text-opacity, 1));
+}
+
+.install-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.install-prompt .primary-button {
+  --tw-border-opacity: 1;
+  border-color: rgb(6 78 59 / var(--tw-border-opacity, 1));
+  --tw-bg-opacity: 1;
+  background-color: rgb(6 78 59 / var(--tw-bg-opacity, 1));
+}
+
+.install-prompt .primary-button:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(6 95 70 / var(--tw-bg-opacity, 1));
+}
+
+.install-prompt .icon-button {
+  --tw-border-opacity: 1;
+  border-color: rgb(167 243 208 / var(--tw-border-opacity, 1));
+  background-color: rgb(255 255 255 / 0.8);
+  --tw-text-opacity: 1;
+  color: rgb(6 78 59 / var(--tw-text-opacity, 1));
+}
+
+.install-prompt .icon-button:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+
 .field {
   display: grid;
   gap: 0.25rem;
@@ -765,6 +840,7 @@ button,
 .print-actions button,
   .button-row button,
   .row-actions button,
+  .small-add-button,
   .summary-actions button,
   .row-move-actions button,
   .primary-button,
@@ -796,6 +872,7 @@ button,
 .print-actions button:hover,
   .button-row button:hover,
   .row-actions button:hover,
+  .small-add-button:hover,
   .summary-actions button:hover,
   .row-move-actions button:hover,
   .primary-button:hover,
@@ -807,6 +884,7 @@ button,
 .print-actions button:disabled,
   .button-row button:disabled,
   .row-actions button:disabled,
+  .small-add-button:disabled,
   .summary-actions button:disabled,
   .row-move-actions button:disabled,
   .primary-button:disabled,
@@ -980,17 +1058,15 @@ button,
   gap: 0.75rem;
 }
 
-.section-toolbar .row-actions {
-  display: grid;
-  width: 100%;
-  flex-basis: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.section-toolbar .row-actions button {
-  min-width: 0px;
+.small-add-button {
+  gap: 0.375rem;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
+}
+
+.small-add-button svg {
+  height: 1rem;
+  width: 1rem;
 }
 
 .section-toolbar > input {
@@ -1224,7 +1300,7 @@ button,
 @media (min-width: 1024px) {
   .chore-name-cell {
     grid-column: auto;
-    grid-template-columns: 32px 96px 140px minmax(150px,1fr);
+    grid-template-columns: 32px 140px minmax(170px,1fr);
     padding: 0.5rem;
     --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
     --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
@@ -1472,18 +1548,26 @@ button,
   }
 }
 
+.summary-actions .icon-button,
+  .row-move-actions .icon-button {
+  height: 2.5rem;
+  width: 2.5rem;
+  padding: 0.5rem;
+}
+
+.summary-actions .icon-button svg,
+  .row-move-actions .icon-button svg {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
 @media (min-width: 640px) {
   .print-actions {
     display: flex;
   }
 
-  .section-toolbar .row-actions {
-    display: flex;
-    width: auto;
-    flex-basis: auto;
-  }
-
-  .section-toolbar .row-actions button {
+  .section-toolbar .row-actions button,
+    .small-add-button {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
@@ -1516,7 +1600,7 @@ button,
 
 @media (min-width: 1024px) {
   .chore-editor-row {
-    grid-template-columns: minmax(470px, 2fr) repeat(7, minmax(56px, 0.55fr)) minmax(58px, 0.35fr) minmax(142px, 0.6fr);
+    grid-template-columns: minmax(390px, 2fr) repeat(7, minmax(56px, 0.55fr)) minmax(58px, 0.35fr) max-content;
   }
 
   .weekly-editor-row {
@@ -1529,9 +1613,8 @@ button,
     grid-column: auto;
   }
 
-  .regular-label-input,
-    .daily-empty-label {
-    grid-column: span 2;
+  .regular-label-input {
+    grid-column: auto;
   }
 
   .weekly-editor-row > select,
@@ -1729,6 +1812,17 @@ button,
   color: rgb(0 0 0 / var(--tw-text-opacity, 1));
 }
 
+.regular-chore-icon {
+  margin-right: 0.375rem;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.regular-chore-icon svg {
+  height: 1.25rem;
+  width: 1.25rem;
+}
+
 .paid-marker {
   position: absolute;
   left: 0.25rem;
@@ -1751,15 +1845,15 @@ button,
 }
 
 .write-line {
-  width: calc(100% - 0.35in);
-  display: block;
-  border-bottom-width: 1px;
-  --tw-border-opacity: 1;
-  border-color: rgb(100 116 139 / var(--tw-border-opacity, 1));
+  display: none;
 }
 
 .visible {
   visibility: visible;
+}
+
+.flex {
+  display: flex;
 }
 
 .contents {
@@ -1822,6 +1916,9 @@ button,
   html,
   body {
     background: white !important;
+    margin: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
   }
 
   .app-shell {
@@ -1865,12 +1962,18 @@ button,
 
   .chart-page {
     page: chartLandscape;
+    box-sizing: border-box;
     width: 10.5in;
-    min-height: auto;
+    height: 8in;
+    min-height: 0;
+    max-height: 8in;
     margin: 0;
     padding: 0;
     border-radius: 0;
+    overflow: hidden;
     box-shadow: none !important;
+    -moz-column-break-inside: avoid;
+         break-inside: avoid;
   }
 
   .print-all-pages .chart-page {
@@ -1886,10 +1989,42 @@ button,
   .chart-page.portrait {
     page: chartPortrait;
     width: 8in;
+    height: 10.5in;
+    max-height: 10.5in;
   }
 
   .chart-title {
-    font-size: 28px;
+    margin-bottom: 0.12in;
+    font-size: 26px;
+    line-height: 1.1;
+  }
+
+  .chart-grid {
+    gap: 4px;
+  }
+
+  .day-header {
+    height: 0.32in;
+    font-size: 16px;
+  }
+
+  .section-row {
+    height: 0.26in;
+    margin-top: 0.06in;
+  }
+
+  .icon-cell {
+    height: 0.42in;
+  }
+
+  .text-cell,
+  .write-cell,
+  .weekly-cell {
+    min-height: 0.34in;
+  }
+
+  .weekly-title {
+    margin-top: 0.1in;
   }
 
   .day-header,

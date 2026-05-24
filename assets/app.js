@@ -4,11 +4,19 @@
   const STORE_NAME = "app-state";
   const CHART_KEY = "active-chart";
   const FILE_HANDLE_KEY = "json-file-handle";
+  const INSTALL_PROMPT_DISMISSED_KEY = "chore-chart-install-dismissed";
   const CHART_VERSION = 2;
   const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
   const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const DAY_COLORS = ["#ded8ef", "#cfe0f8", "#fde6ca", "#f5c9cd", "#d2e2e6", "#dcefd7", "#fff2c7"];
   const ROW_TYPES = ["icon", "regular", "empty"];
+  let pendingInstallPromptEvent = null;
+
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    pendingInstallPromptEvent = event;
+    window.dispatchEvent(new CustomEvent("chorechart:installable"));
+  });
 
   function openChartDatabase() {
     return new Promise((resolve, reject) => {
@@ -97,6 +105,33 @@
     };
   }
 
+  function readLocalFlag(key) {
+    try {
+      return window.localStorage.getItem(key) === "1";
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function writeLocalFlag(key) {
+    try {
+      window.localStorage.setItem(key, "1");
+    } catch (error) {
+      // Local storage can be unavailable in private or restricted browsing.
+    }
+  }
+
+  function isStandaloneApp() {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+
+  function isIosSafari() {
+    const userAgent = window.navigator.userAgent || "";
+    const isIos = /iPad|iPhone|iPod/.test(userAgent) || (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+    const isSafari = /Safari/.test(userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS|Chrome/.test(userAgent);
+    return isIos && isSafari;
+  }
+
   function uid(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
   }
@@ -148,13 +183,14 @@
     return Object.fromEntries(DAY_KEYS.map((key) => [key, defaultValue]));
   }
 
-  function choreRow(type, label = "", icon = "laundry", paid = false, selectedDays = daySelection(true)) {
+  function choreRow(type, label = "", icon = "laundry", paid = false, selectedDays = daySelection(true), showIcon = type === "icon") {
     return {
       id: uid(type),
       type,
       label,
       iconType: "svg",
       icon,
+      showIcon,
       paid,
       days: selectedDays
     };
@@ -171,9 +207,9 @@
 
   function defaultSection(id, name) {
     const rows = [
-      choreRow("icon", "Laundry", "laundry"),
-      choreRow("icon", "Make bed", "bed"),
-      choreRow("icon", "Brush teeth", "toothbrush")
+      choreRow("regular", "Laundry", "laundry", false, daySelection(true), true),
+      choreRow("regular", "Make bed", "bed", false, daySelection(true), true),
+      choreRow("regular", "Brush teeth", "toothbrush", false, daySelection(true), true)
     ];
 
     if (name === "Morning") {
@@ -243,16 +279,38 @@
     return window.ChoreChartIcons && window.ChoreChartIcons.svgIcons[icon] ? icon : "room";
   }
 
+  function rowHasIcon(row) {
+    return row && (row.type === "icon" || Boolean(row.showIcon));
+  }
+
+  function inferRowType(row) {
+    const hasIcon = rowHasIcon(row);
+    const hasLabel = Boolean(String(row && row.label || "").trim());
+
+    if (hasIcon && !hasLabel) return "icon";
+    if (hasLabel) return "regular";
+    return "empty";
+  }
+
   function normalizeChoreRow(row) {
-    const type = ROW_TYPES.includes(row && row.type) ? row.type : "regular";
-    return {
-      id: row.id || uid(type),
-      type,
-      label: type === "empty" ? "" : String(row.label || ""),
+    const savedType = ROW_TYPES.includes(row && row.type) ? row.type : "regular";
+    const showIcon = savedType === "icon" || Boolean(row.showIcon);
+    const normalized = {
+      id: row.id || uid(savedType),
+      type: savedType,
+      label: savedType === "empty" ? "" : String(row.label || ""),
       iconType: "svg",
-      icon: validIcon(row.icon || "room"),
+      icon: showIcon ? validIcon(row.icon || "room") : "",
+      showIcon,
       paid: Boolean(row.paid),
       days: normalizeDays(row.days, true)
+    };
+
+    normalized.type = inferRowType(normalized);
+    if (normalized.type === "empty") normalized.label = "";
+
+    return {
+      ...normalized
     };
   }
 
@@ -395,6 +453,10 @@
       fileHandle: null,
       importError: "",
       dataStatus: "",
+      installDismissed: false,
+      installMode: "",
+      installPromptEvent: null,
+      installPromptVisible: false,
       saveChartDebounced: null,
       storageReady: false,
       printMode: "selected",
@@ -410,6 +472,9 @@
             this.importError = "Could not save changes in this browser.";
           }
         });
+
+        this.installDismissed = readLocalFlag(INSTALL_PROMPT_DISMISSED_KEY);
+        this.setupInstallPrompt();
 
         this.chart = await loadStoredChart();
         this.fileHandle = await loadFileHandle();
@@ -437,31 +502,117 @@
         return window.ChoreChartIcons.svgIcons.coin;
       },
 
+      get showInstallPrompt() {
+        return this.installPromptVisible && !isStandaloneApp();
+      },
+
+      get installPromptMessage() {
+        if (this.installMode === "ios") {
+          return "Use Safari's Share menu, then Add to Home Screen.";
+        }
+
+        return "Save this chart builder to your device for quick access and offline use.";
+      },
+
+      get installPromptActionLabel() {
+        return this.installMode === "ios" ? "Got it" : "Install";
+      },
+
       uiIcon(name) {
         return window.ChoreChartIcons.svgIcons[name] || "";
+      },
+
+      setupInstallPrompt() {
+        const applyPendingInstallPrompt = () => {
+          if (!pendingInstallPromptEvent) return;
+          this.installPromptEvent = pendingInstallPromptEvent;
+          this.installMode = "native";
+          this.refreshInstallPrompt();
+        };
+
+        window.addEventListener("chorechart:installable", applyPendingInstallPrompt);
+
+        window.addEventListener("appinstalled", () => {
+          this.clearInstallPrompt(true);
+        });
+
+        applyPendingInstallPrompt();
+
+        if (isIosSafari()) {
+          this.installMode = "ios";
+          this.refreshInstallPrompt();
+        }
+      },
+
+      refreshInstallPrompt() {
+        this.installPromptVisible = !this.installDismissed && !isStandaloneApp() && Boolean(this.installPromptEvent || this.installMode === "ios");
+      },
+
+      clearInstallPrompt(persist = false) {
+        this.installPromptEvent = null;
+        this.installPromptVisible = false;
+        if (persist) {
+          this.installDismissed = true;
+          writeLocalFlag(INSTALL_PROMPT_DISMISSED_KEY);
+        }
+      },
+
+      dismissInstallPrompt() {
+        this.clearInstallPrompt(true);
+      },
+
+      async installApp() {
+        if (this.installMode === "ios" || !this.installPromptEvent) {
+          this.dismissInstallPrompt();
+          return;
+        }
+
+        const promptEvent = this.installPromptEvent;
+        this.clearInstallPrompt(true);
+
+        try {
+          await promptEvent.prompt();
+        } catch (error) {
+          console.error("Could not show install prompt.", error);
+        }
       },
 
       iconValue(row) {
         return `${row.iconType || "svg"}:${row.icon || "room"}`;
       },
 
-      setRowIcon(row, value) {
-        const icon = window.ChoreChartIcons.parseIconValue(value);
-        if (icon.iconType !== "svg") return;
-        row.iconType = icon.iconType;
-        row.icon = validIcon(icon.icon);
+      rowIconChoice(row) {
+        return rowHasIcon(row) ? validIcon(row.icon || "room") : "";
+      },
+
+      setRowIconChoice(row, value) {
+        row.iconType = "svg";
+        row.icon = value ? validIcon(value) : "";
+        row.showIcon = Boolean(value);
+        row.type = inferRowType(row);
+      },
+
+      syncRowFromFields(row) {
+        row.label = String(row.label || "");
+        row.type = inferRowType(row);
       },
 
       normalizeRowForType(row) {
         if (!ROW_TYPES.includes(row.type)) row.type = "regular";
         row.days = normalizeDays(row.days, true);
         row.iconType = "svg";
-        row.icon = validIcon(row.icon || "room");
+        row.showIcon = rowHasIcon(row);
+        row.icon = row.showIcon ? validIcon(row.icon || "room") : "";
+        row.type = inferRowType(row);
         if (row.type === "empty") row.label = "";
       },
 
       renderIcon(row) {
         return window.ChoreChartIcons.renderIcon(row);
+      },
+
+      rowShowsInlineIcon(row) {
+        return row.type === "regular" && rowHasIcon(row);
       },
 
       sectionIconGroups(section) {
@@ -478,24 +629,31 @@
       },
 
       printIconCells(group, child = this.activeChild) {
-        return child.days.flatMap((day) => [0, 1, 2].map((slotIndex) => {
-          const row = group.rows[slotIndex];
-          return {
-            key: `${group.id}-${day.key}-${slotIndex}`,
-            color: day.color,
-            row,
-            visible: Boolean(row && row.days[day.key])
-          };
-        }));
+        return child.days.flatMap((day, dayIndex) => group.rows
+          .filter((row) => row && row.days[day.key])
+          .map((row, slotIndex) => {
+            return {
+              key: `${group.id}-${day.key}-${row.id}`,
+              color: day.color,
+              gridColumn: dayIndex * 3 + slotIndex + 1,
+              row,
+              visible: true
+            };
+          }));
       },
 
       printDayCells(row, child = this.activeChild) {
-        return child.days.map((day) => ({
+        return child.days.map((day, dayIndex) => ({
           key: `${row.id}-${day.key}`,
           color: day.color,
+          gridColumn: `${dayIndex * 3 + 1} / span 3`,
           row,
           visible: Boolean(row.days[day.key])
         }));
+      },
+
+      weeklyCellGridColumn(index) {
+        return `${(index % 3) * 7 + 1} / span 7`;
       },
 
       addChild() {
@@ -559,8 +717,8 @@
         this.sortItems(rows, itemId, position);
       },
 
-      addRow(section, type) {
-        section.rows.push(choreRow(type, type === "regular" ? "New chore" : "", type === "icon" ? "room" : "room"));
+      addRow(section) {
+        section.rows.push(choreRow("empty", "", "", false, daySelection(true), false));
       },
 
       deleteRow(section, index) {

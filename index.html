@@ -7,11 +7,11 @@
     <title>Chore Charts</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="assets/icon-192.svg" type="image/svg+xml">
-    <script defer src="assets/icons.js?v=7"></script>
-    <script defer src="assets/app.js?v=8"></script>
+    <script defer src="assets/icons.js?v=10"></script>
+    <script defer src="assets/app.js?v=14"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=8">
+    <link rel="stylesheet" href="assets/app.css?v=16">
   </head>
   <body class="bg-slate-100 text-slate-950">
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
@@ -28,6 +28,17 @@
             <button type="button" @click="printChart('all')">Print All</button>
           </div>
         </div>
+
+        <section class="install-prompt" x-show="showInstallPrompt" x-transition>
+          <div class="install-copy">
+            <h2>Install Chore Charts</h2>
+            <p x-text="installPromptMessage"></p>
+          </div>
+          <div class="install-actions">
+            <button type="button" class="primary-button" @click="installApp" x-text="installPromptActionLabel"></button>
+            <button type="button" class="icon-button" @click="dismissInstallPrompt" aria-label="Dismiss install prompt" title="Dismiss install prompt" x-html="uiIcon('close')"></button>
+          </div>
+        </section>
 
         <div class="chart-settings">
           <label class="field">
@@ -78,14 +89,11 @@
             <div class="section-toolbar">
               <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag section" title="Drag section" x-html="uiIcon('grip')"></button>
               <input type="text" x-model="section.name" aria-label="Section name">
-              <div class="row-actions">
-                <button type="button" @click="addRow(section, 'icon')">Add Icon</button>
-                <button type="button" @click="addRow(section, 'regular')">Add Chore</button>
-                <button type="button" @click="addRow(section, 'empty')">Add Empty</button>
-              </div>
+              <button type="button" class="small-add-button" @click="addRow(section)" aria-label="Add chore">
+                <span x-html="uiIcon('plus')"></span>
+                <span>Add Chore</span>
+              </button>
               <div class="summary-actions">
-                <button type="button" class="icon-button" @click="moveSection(sectionIndex, -1)" aria-label="Move section up" title="Move section up" x-html="uiIcon('arrowUp')"></button>
-                <button type="button" class="icon-button" @click="moveSection(sectionIndex, 1)" aria-label="Move section down" title="Move section down" x-html="uiIcon('arrowDown')"></button>
                 <button type="button" class="icon-button danger-button" @click="deleteSection(sectionIndex)" aria-label="Delete section" title="Delete section" x-html="uiIcon('delete')"></button>
               </div>
             </div>
@@ -105,31 +113,13 @@
                 <div class="chore-editor-row" x-sort:item="row.id">
                   <div class="chore-name-cell">
                     <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag chore" title="Drag chore" x-html="uiIcon('grip')"></button>
-                    <select x-model="row.type" @change="normalizeRowForType(row)" aria-label="Chore type">
-                      <option value="icon">Icon</option>
-                      <option value="regular">Regular</option>
-                      <option value="empty">Empty</option>
+                    <select :value="rowIconChoice(row)" @change="setRowIconChoice(row, $event.target.value)" aria-label="Icon">
+                      <option value="">No icon</option>
+                      <template x-for="option in iconOptions" :key="iconValue(option)">
+                        <option :value="option.icon" x-text="option.label"></option>
+                      </template>
                     </select>
-
-                    <template x-if="row.type === 'icon'">
-                      <select x-model="row.icon" aria-label="Icon">
-                        <option value="bed">Bed</option>
-                        <option value="toothbrush">Toothbrush</option>
-                        <option value="laundry">Laundry</option>
-                        <option value="dishes">Dishes</option>
-                        <option value="trash">Trash</option>
-                        <option value="backpack">Backpack</option>
-                        <option value="room">Room</option>
-                      </select>
-                    </template>
-
-                    <template x-if="row.type !== 'empty'">
-                      <input type="text" x-model="row.label" :class="{ 'regular-label-input': row.type === 'regular' }" :placeholder="row.type === 'icon' ? 'Optional label' : 'Chore name'">
-                    </template>
-
-                    <template x-if="row.type === 'empty'">
-                      <span class="empty-row-label daily-empty-label">Empty write-in line</span>
-                    </template>
+                    <input type="text" x-model="row.label" @input="syncRowFromFields(row)" class="regular-label-input" placeholder="Chore name">
                   </div>
 
                   <template x-for="day in activeChild.days" :key="`${row.id}-${day.key}`">
@@ -146,8 +136,6 @@
                   </label>
 
                   <div class="row-move-actions">
-                    <button type="button" class="icon-button" @click="moveRow(section.rows, rowIndex, -1)" aria-label="Move chore up" title="Move chore up" x-html="uiIcon('arrowUp')"></button>
-                    <button type="button" class="icon-button" @click="moveRow(section.rows, rowIndex, 1)" aria-label="Move chore down" title="Move chore down" x-html="uiIcon('arrowDown')"></button>
                     <button type="button" class="icon-button danger-button" @click="deleteRow(section, rowIndex)" aria-label="Delete chore" title="Delete chore" x-html="uiIcon('delete')"></button>
                   </div>
                 </div>
@@ -198,8 +186,6 @@
                 </label>
                 <div class="row-move-actions">
                   <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag weekly chore" title="Drag weekly chore" x-html="uiIcon('grip')"></button>
-                  <button type="button" class="icon-button" @click="moveWeeklyRow(rowIndex, -1)" aria-label="Move weekly chore up" title="Move weekly chore up" x-html="uiIcon('arrowUp')"></button>
-                  <button type="button" class="icon-button" @click="moveWeeklyRow(rowIndex, 1)" aria-label="Move weekly chore down" title="Move weekly chore down" x-html="uiIcon('arrowDown')"></button>
                   <button type="button" class="icon-button danger-button" @click="deleteWeeklyRow(rowIndex)" aria-label="Delete weekly chore" title="Delete weekly chore" x-html="uiIcon('delete')"></button>
                 </div>
               </div>
@@ -228,6 +214,7 @@
 
       <section class="preview-panel" x-show="viewMode === 'preview'">
         <div class="preview-scroll screen-preview">
+          <template x-if="storageReady">
           <article class="chart-page" :class="activeChild.orientation">
             <h1 class="chart-title" x-text="`${activeChild.childName}'s Responsibility Chart`"></h1>
             <div class="chart-grid">
@@ -242,9 +229,9 @@
                   <template x-for="group in sectionIconGroups(section)" :key="group.id">
                     <div class="contents">
                       <template x-for="cell in printIconCells(group)" :key="cell.key">
-                        <div class="chart-cell icon-cell" :style="`background-color: ${cell.color}`">
+                        <div class="chart-cell icon-cell" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
                           <span class="paid-marker" x-show="cell.visible && cell.row.paid" x-html="paidCoin"></span>
-                          <span class="icon-render svg-icon" x-show="cell.visible" x-html="renderIcon(cell.row)"></span>
+                          <span class="icon-render svg-icon" x-html="renderIcon(cell.row)"></span>
                         </div>
                       </template>
                     </div>
@@ -253,10 +240,11 @@
                   <template x-for="row in sectionDetailRows(section)" :key="row.id">
                     <div class="contents">
                       <template x-for="cell in printDayCells(row)" :key="cell.key">
-                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`grid-column: span 3; background-color: ${cell.color}`">
-                          <span class="paid-marker" x-show="cell.visible && row.paid" x-html="paidCoin"></span>
-                          <span x-show="cell.visible && row.type === 'regular'" x-text="row.label"></span>
-                          <span class="write-line" x-show="cell.visible && row.type === 'empty'"></span>
+                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
+                          <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
+                          <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
+                          <span x-show="row.type === 'regular'" x-text="row.label"></span>
+                          <span class="write-line" x-show="row.type === 'empty'"></span>
                         </div>
                       </template>
                     </div>
@@ -265,19 +253,23 @@
               </template>
 
               <div class="section-row weekly-title" style="grid-column: 1 / -1" x-text="activeChild.weeklyChores.title"></div>
-              <template x-for="row in activeChild.weeklyChores.rows" :key="row.id">
-                <div class="chart-cell weekly-cell" style="grid-column: 1 / -1">
+              <template x-for="(row, rowIndex) in activeChild.weeklyChores.rows" :key="row.id">
+                <div class="chart-cell weekly-cell" :style="`grid-column: ${weeklyCellGridColumn(rowIndex)}`">
                   <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
+                  <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
                   <span x-show="row.type === 'regular'" x-text="row.label"></span>
                   <span class="write-line" x-show="row.type === 'empty'"></span>
                 </div>
               </template>
             </div>
           </article>
+          </template>
         </div>
       </section>
 
       <div class="print-all-pages" aria-hidden="true">
+        <template x-if="storageReady">
+        <div class="contents">
         <template x-for="child in chart.children" :key="`print-${child.id}`">
           <article class="chart-page" :class="child.orientation">
             <h1 class="chart-title" x-text="`${child.childName}'s Responsibility Chart`"></h1>
@@ -293,9 +285,9 @@
                   <template x-for="group in sectionIconGroups(section)" :key="`${child.id}-${group.id}`">
                     <div class="contents">
                       <template x-for="cell in printIconCells(group, child)" :key="`${child.id}-${cell.key}`">
-                        <div class="chart-cell icon-cell" :style="`background-color: ${cell.color}`">
+                        <div class="chart-cell icon-cell" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
                           <span class="paid-marker" x-show="cell.visible && cell.row.paid" x-html="paidCoin"></span>
-                          <span class="icon-render svg-icon" x-show="cell.visible" x-html="renderIcon(cell.row)"></span>
+                          <span class="icon-render svg-icon" x-html="renderIcon(cell.row)"></span>
                         </div>
                       </template>
                     </div>
@@ -304,10 +296,11 @@
                   <template x-for="row in sectionDetailRows(section)" :key="`${child.id}-${row.id}`">
                     <div class="contents">
                       <template x-for="cell in printDayCells(row, child)" :key="`${child.id}-${cell.key}`">
-                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`grid-column: span 3; background-color: ${cell.color}`">
-                          <span class="paid-marker" x-show="cell.visible && row.paid" x-html="paidCoin"></span>
-                          <span x-show="cell.visible && row.type === 'regular'" x-text="row.label"></span>
-                          <span class="write-line" x-show="cell.visible && row.type === 'empty'"></span>
+                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
+                          <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
+                          <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
+                          <span x-show="row.type === 'regular'" x-text="row.label"></span>
+                          <span class="write-line" x-show="row.type === 'empty'"></span>
                         </div>
                       </template>
                     </div>
@@ -316,15 +309,18 @@
               </template>
 
               <div class="section-row weekly-title" style="grid-column: 1 / -1" x-text="child.weeklyChores.title"></div>
-              <template x-for="row in child.weeklyChores.rows" :key="`${child.id}-${row.id}`">
-                <div class="chart-cell weekly-cell" style="grid-column: 1 / -1">
+              <template x-for="(row, rowIndex) in child.weeklyChores.rows" :key="`${child.id}-${row.id}`">
+                <div class="chart-cell weekly-cell" :style="`grid-column: ${weeklyCellGridColumn(rowIndex)}`">
                   <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
+                  <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
                   <span x-show="row.type === 'regular'" x-text="row.label"></span>
                   <span class="write-line" x-show="row.type === 'empty'"></span>
                 </div>
               </template>
             </div>
           </article>
+        </template>
+        </div>
         </template>
       </div>
     </main>
