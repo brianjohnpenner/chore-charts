@@ -14,13 +14,13 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="assets/app.css?v=27">
   </head>
-  <body class="bg-slate-100 text-slate-950">
+  <body>
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
-      <header class="editor-panel print:hidden">
+      <header class="editor-panel">
         <div class="editor-header">
           <div>
-            <h1 class="text-xl font-semibold">Chore Charts</h1>
-            <p class="text-sm text-slate-500">Build the chart by row, then preview or print.</p>
+            <h1>Chore Charts</h1>
+            <p>Build the chart by row, then preview or print.</p>
           </div>
           <div class="print-actions">
             <button type="button" :class="{ active: viewMode === 'edit' }" @click="viewMode = 'edit'">Edit</button>
@@ -69,7 +69,7 @@
         </div>
       </header>
 
-      <section class="editor-workspace print:hidden" x-show="viewMode === 'edit'">
+      <section class="editor-workspace" x-show="viewMode === 'edit'">
         <section class="control-section">
           <div class="section-heading">
             <h2>Days</h2>
@@ -107,7 +107,7 @@
                 </template>
                 <div class="grid-heading paid-heading">Paid</div>
                 <div class="row-move-actions action-heading-spacer" aria-hidden="true">
-                  <span class="icon-button invisible" aria-hidden="true" x-html="uiIcon('delete')"></span>
+                  <span class="icon-button" aria-hidden="true" x-html="uiIcon('delete')"></span>
                 </div>
               </div>
 
@@ -187,8 +187,8 @@
               <div class="grid-heading">Weekly chore</div>
               <div class="grid-heading">Paid</div>
               <div class="row-move-actions action-heading-spacer" aria-hidden="true">
-                <span class="icon-button invisible" aria-hidden="true" x-html="uiIcon('grip')"></span>
-                <span class="icon-button invisible" aria-hidden="true" x-html="uiIcon('delete')"></span>
+                <span class="icon-button" aria-hidden="true" x-html="uiIcon('grip')"></span>
+                <span class="icon-button" aria-hidden="true" x-html="uiIcon('delete')"></span>
               </div>
             </div>
 
@@ -253,11 +253,11 @@
             <button type="button" @click="resetToDefaults">Reset</button>
           </div>
           <p class="data-status" x-show="dataStatus" x-text="dataStatus"></p>
-          <p class="text-sm text-red-700" x-show="importError" x-text="importError"></p>
+          <p class="import-error" x-show="importError" x-text="importError"></p>
         </section>
       </section>
 
-      <dialog class="share-dialog print:hidden" x-ref="shareDialog" @close="shareCopyStatus = ''">
+      <dialog class="share-dialog" x-ref="shareDialog" @close="shareCopyStatus = ''">
         <form method="dialog" class="share-dialog-panel">
           <div class="share-dialog-header">
             <div>
