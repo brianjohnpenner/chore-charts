@@ -419,6 +419,10 @@
     @apply min-h-10 justify-start rounded-lg bg-white p-1.5 ring-1 ring-slate-200 lg:min-h-11 lg:justify-center;
   }
 
+  .weekly-editor-row > .row-move-actions {
+    @apply flex-nowrap;
+  }
+
   .summary-actions .icon-button,
   .row-move-actions .icon-button {
     @apply h-10 w-10 p-2;
@@ -504,6 +508,10 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
+    .weekly-editor-row {
+      grid-template-columns: minmax(0, 1fr) auto max-content;
+    }
+
   }
 
   @screen lg {
@@ -514,7 +522,7 @@
 
     .weekly-grid-header,
     .weekly-editor-row {
-      grid-template-columns: minmax(300px, 1fr) 58px 52px;
+      grid-template-columns: minmax(300px, 1fr) 58px max-content;
     }
 
     .chore-name-cell > .icon-picker,

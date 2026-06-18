@@ -1697,6 +1697,10 @@ button,
   }
 }
 
+.weekly-editor-row > .row-move-actions {
+  flex-wrap: nowrap;
+}
+
 .summary-actions .icon-button,
   .row-move-actions .icon-button {
   height: 2.5rem;
@@ -1912,6 +1916,10 @@ button,
   .chore-editor-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  .weekly-editor-row {
+    grid-template-columns: minmax(0, 1fr) auto max-content;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -1922,7 +1930,7 @@ button,
 
   .weekly-grid-header,
     .weekly-editor-row {
-    grid-template-columns: minmax(300px, 1fr) 58px 52px;
+    grid-template-columns: minmax(300px, 1fr) 58px max-content;
   }
 
   .chore-name-cell > .icon-picker,

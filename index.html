@@ -12,7 +12,7 @@
     <script defer src="assets/app.js?v=18"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=26">
+    <link rel="stylesheet" href="assets/app.css?v=27">
   </head>
   <body class="bg-slate-100 text-slate-950">
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
@@ -187,6 +187,7 @@
               <div class="grid-heading">Weekly chore</div>
               <div class="grid-heading">Paid</div>
               <div class="row-move-actions action-heading-spacer" aria-hidden="true">
+                <span class="icon-button invisible" aria-hidden="true" x-html="uiIcon('grip')"></span>
                 <span class="icon-button invisible" aria-hidden="true" x-html="uiIcon('delete')"></span>
               </div>
             </div>
