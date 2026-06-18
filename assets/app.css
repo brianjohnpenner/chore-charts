@@ -715,7 +715,7 @@ img, svg, video {
   .chore-grid-header {
     border-radius: 0px;
     background-color: transparent;
-    padding: 0px;
+    padding: 0 0.5rem;
     box-shadow: none;
   }
 }
@@ -877,7 +877,8 @@ img, svg, video {
     box-shadow: none;
   }
 
-  .chore-editor-row > .chore-row-drag {
+  .chore-editor-row > .chore-row-drag,
+  .chore-grid-header .paid-heading + .action-heading-spacer {
     margin-left: 0.625rem;
   }
 }
