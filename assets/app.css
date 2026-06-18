@@ -1254,6 +1254,11 @@ button,
   gap: 6px;
 }
 
+.chore-editor-row > template,
+  .weekly-editor-row > template {
+  display: none;
+}
+
 .chore-editor-row {
   border-radius: 0.75rem;
   --tw-bg-opacity: 1;
@@ -1359,9 +1364,13 @@ button,
 }
 
 .day-check-heading,
-  .paid-heading,
-  .action-heading {
+  .paid-heading {
   justify-content: center;
+}
+
+.action-heading-spacer {
+  pointer-events: none;
+  opacity: 0;
 }
 
 .chore-name-cell {
@@ -1642,7 +1651,7 @@ button,
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
   --tw-text-opacity: 1;
-  color: rgb(100 116 139 / var(--tw-text-opacity, 1));
+  color: rgb(148 163 184 / var(--tw-text-opacity, 1));
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-backdrop-filter;
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-backdrop-filter;
@@ -1652,18 +1661,19 @@ button,
 
 .paid-checkbox input:checked + span {
   --tw-border-opacity: 1;
-  border-color: rgb(15 23 42 / var(--tw-border-opacity, 1));
+  border-color: rgb(251 191 36 / var(--tw-border-opacity, 1));
   --tw-bg-opacity: 1;
-  background-color: rgb(15 23 42 / var(--tw-bg-opacity, 1));
+  background-color: rgb(255 251 235 / var(--tw-bg-opacity, 1));
   --tw-text-opacity: 1;
-  color: rgb(255 255 255 / var(--tw-text-opacity, 1));
+  color: rgb(217 119 6 / var(--tw-text-opacity, 1));
+  --tw-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: inset 0 2px 4px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
 .paid-checkbox svg {
   height: 1rem;
   width: 1rem;
-  --tw-text-opacity: 1;
-  color: rgb(0 0 0 / var(--tw-text-opacity, 1));
 }
 
 .row-move-actions {
@@ -1905,12 +1915,14 @@ button,
 }
 
 @media (min-width: 1024px) {
-  .chore-editor-row {
-    grid-template-columns: minmax(390px, 2fr) repeat(7, minmax(56px, 0.55fr)) minmax(58px, 0.35fr) max-content;
+  .chore-grid-header,
+    .chore-editor-row {
+    grid-template-columns: minmax(300px, 2fr) repeat(7, 56px) 58px 52px;
   }
 
-  .weekly-editor-row {
-    grid-template-columns: minmax(390px, 1fr) minmax(58px, 0.3fr) max-content;
+  .weekly-grid-header,
+    .weekly-editor-row {
+    grid-template-columns: minmax(300px, 1fr) 58px 52px;
   }
 
   .chore-name-cell > .icon-picker,
@@ -2157,15 +2169,23 @@ button,
   width: 1rem;
   align-items: center;
   justify-content: center;
+  border-radius: 9999px;
+  background-color: rgb(255 255 255 / 0.9);
   --tw-text-opacity: 1;
-  color: rgb(15 23 42 / var(--tw-text-opacity, 1));
+  color: rgb(217 119 6 / var(--tw-text-opacity, 1));
+  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(252 211 77 / var(--tw-ring-opacity, 1));
 }
 
 .paid-marker svg {
-  height: 1rem;
-  width: 1rem;
-  --tw-text-opacity: 1;
-  color: rgb(0 0 0 / var(--tw-text-opacity, 1));
+  height: 0.75rem;
+  width: 0.75rem;
 }
 
 .write-line {
@@ -2174,6 +2194,10 @@ button,
 
 .visible {
   visibility: visible;
+}
+
+.invisible {
+  visibility: hidden;
 }
 
 .flex {

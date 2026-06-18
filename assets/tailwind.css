@@ -268,6 +268,11 @@
     gap: 6px;
   }
 
+  .chore-editor-row > template,
+  .weekly-editor-row > template {
+    display: none;
+  }
+
   .chore-editor-row {
     @apply rounded-xl bg-white p-2 ring-1 ring-slate-200 lg:rounded-none lg:bg-transparent lg:p-0 lg:ring-0;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -299,9 +304,12 @@
   }
 
   .day-check-heading,
-  .paid-heading,
-  .action-heading {
+  .paid-heading {
     @apply justify-center;
+  }
+
+  .action-heading-spacer {
+    @apply pointer-events-none opacity-0;
   }
 
   .chore-name-cell {
@@ -396,15 +404,15 @@
   }
 
   .paid-checkbox > span {
-    @apply flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-500 transition;
+    @apply flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-400 transition;
   }
 
   .paid-checkbox input:checked + span {
-    @apply border-slate-900 bg-slate-900 text-white;
+    @apply border-amber-400 bg-amber-50 text-amber-600 shadow-inner;
   }
 
   .paid-checkbox svg {
-    @apply h-4 w-4 text-black;
+    @apply h-4 w-4;
   }
 
   .row-move-actions {
@@ -499,12 +507,14 @@
   }
 
   @screen lg {
+    .chore-grid-header,
     .chore-editor-row {
-      grid-template-columns: minmax(390px, 2fr) repeat(7, minmax(56px, 0.55fr)) minmax(58px, 0.35fr) max-content;
+      grid-template-columns: minmax(300px, 2fr) repeat(7, 56px) 58px 52px;
     }
 
+    .weekly-grid-header,
     .weekly-editor-row {
-      grid-template-columns: minmax(390px, 1fr) minmax(58px, 0.3fr) max-content;
+      grid-template-columns: minmax(300px, 1fr) 58px 52px;
     }
 
     .chore-name-cell > .icon-picker,
@@ -634,11 +644,11 @@
   }
 
   .paid-marker {
-    @apply absolute left-1 top-1 z-10 inline-flex h-4 w-4 items-center justify-center text-slate-900;
+    @apply absolute left-1 top-1 z-10 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/90 text-amber-600 shadow-sm ring-1 ring-amber-300;
   }
 
   .paid-marker svg {
-    @apply h-4 w-4 text-black;
+    @apply h-3 w-3;
   }
 
   .write-line {
