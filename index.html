@@ -7,11 +7,12 @@
     <title>Chore Charts</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="assets/icon-192.svg" type="image/svg+xml">
-    <script defer src="assets/icons.js?v=10"></script>
-    <script defer src="assets/app.js?v=14"></script>
+    <script defer src="assets/icons.js?v=12"></script>
+    <script defer src="assets/tabler-icons.js?v=1"></script>
+    <script defer src="assets/app.js?v=16"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=16">
+    <link rel="stylesheet" href="assets/app.css?v=19">
   </head>
   <body class="bg-slate-100 text-slate-950">
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
@@ -113,12 +114,27 @@
                 <div class="chore-editor-row" x-sort:item="row.id">
                   <div class="chore-name-cell">
                     <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag chore" title="Drag chore" x-html="uiIcon('grip')"></button>
-                    <select :value="rowIconChoice(row)" @change="setRowIconChoice(row, $event.target.value)" aria-label="Icon">
-                      <option value="">No icon</option>
-                      <template x-for="option in iconOptions" :key="iconValue(option)">
-                        <option :value="option.icon" x-text="option.label"></option>
-                      </template>
-                    </select>
+                    <div class="icon-picker" x-data="{ open: false, iconQuery: '' }">
+                      <button type="button" class="icon-picker-trigger" @click="open = !open" aria-label="Pick icon">
+                        <span class="icon-picker-preview svg-icon" x-show="rowIconChoice(row)" x-html="renderIcon(row)"></span>
+                        <span class="icon-picker-empty" x-show="!rowIconChoice(row)">Icon</span>
+                      </button>
+                      <div class="icon-picker-dropdown" x-show="open" @click.outside="open = false" x-transition>
+                        <input type="search" class="icon-picker-search" x-model="iconQuery" placeholder="Search icons" aria-label="Search icons">
+                        <div class="icon-picker-grid">
+                          <button type="button" class="icon-picker-option icon-picker-none-option" :class="{ active: !rowIconChoice(row) }" @click="setRowIconChoice(row, ''); open = false">
+                            <span class="icon-picker-none">None</span>
+                          </button>
+                          <template x-for="option in filteredIconOptions(iconQuery)" :key="iconValue(option)">
+                            <button type="button" class="icon-picker-option" :class="{ active: rowIconChoice(row) === iconValue(option), favorite: isFavoriteIcon(option) }" @click="setRowIconChoice(row, option); open = false" :title="option.label">
+                              <span class="svg-icon" x-html="renderIcon(option)"></span>
+                              <span class="favorite-toggle" @click.stop="toggleFavoriteIcon(option)" :aria-label="isFavoriteIcon(option) ? 'Remove favorite icon' : 'Favorite icon'" :title="isFavoriteIcon(option) ? 'Remove favorite' : 'Favorite'"></span>
+                            </button>
+                          </template>
+                        </div>
+                        <div class="icon-picker-empty-results" x-show="filteredIconOptions(iconQuery).length === 0">No matches</div>
+                      </div>
+                    </div>
                     <input type="text" x-model="row.label" @input="syncRowFromFields(row)" class="regular-label-input" placeholder="Chore name">
                   </div>
 
@@ -153,15 +169,14 @@
         <section class="chore-section">
           <div class="section-toolbar">
             <input type="text" x-model="activeChild.weeklyChores.title" aria-label="Weekly chores title">
-            <div class="row-actions">
-              <button type="button" @click="addWeeklyRow('regular')">Add Weekly Chore</button>
-              <button type="button" @click="addWeeklyRow('empty')">Add Empty</button>
-            </div>
+            <button type="button" class="small-add-button" @click="addWeeklyRow" aria-label="Add weekly chore">
+              <span x-html="uiIcon('plus')"></span>
+              <span>Add Chore</span>
+            </button>
           </div>
 
           <div class="weekly-grid">
             <div class="weekly-editor-row weekly-grid-header">
-              <div class="grid-heading">Type</div>
               <div class="grid-heading">Weekly chore</div>
               <div class="grid-heading">Paid</div>
               <div class="grid-heading"></div>
@@ -170,16 +185,30 @@
             <div class="weekly-list" x-sort="sortRows(activeChild.weeklyChores.rows, $item, $position)">
             <template x-for="(row, rowIndex) in activeChild.weeklyChores.rows" :key="row.id">
               <div class="weekly-editor-row" x-sort:item="row.id">
-                <select x-model="row.type" @change="normalizeWeeklyRow(row)" aria-label="Weekly row type">
-                  <option value="regular">Regular</option>
-                  <option value="empty">Empty</option>
-                </select>
-                <template x-if="row.type === 'regular'">
-                  <input type="text" x-model="row.label" placeholder="Weekly chore">
-                </template>
-                <template x-if="row.type === 'empty'">
-                  <span class="empty-row-label">Empty write-in line</span>
-                </template>
+                <div class="weekly-name-cell">
+                <div class="icon-picker" x-data="{ open: false, iconQuery: '' }">
+                  <button type="button" class="icon-picker-trigger" @click="open = !open" aria-label="Pick weekly chore icon">
+                    <span class="icon-picker-preview svg-icon" x-show="rowIconChoice(row)" x-html="renderIcon(row)"></span>
+                    <span class="icon-picker-empty" x-show="!rowIconChoice(row)">Icon</span>
+                  </button>
+                  <div class="icon-picker-dropdown" x-show="open" @click.outside="open = false" x-transition>
+                    <input type="search" class="icon-picker-search" x-model="iconQuery" placeholder="Search icons" aria-label="Search icons">
+                    <div class="icon-picker-grid">
+                      <button type="button" class="icon-picker-option icon-picker-none-option" :class="{ active: !rowIconChoice(row) }" @click="setRowIconChoice(row, ''); open = false">
+                        <span class="icon-picker-none">None</span>
+                      </button>
+                      <template x-for="option in filteredIconOptions(iconQuery)" :key="iconValue(option)">
+                        <button type="button" class="icon-picker-option" :class="{ active: rowIconChoice(row) === iconValue(option), favorite: isFavoriteIcon(option) }" @click="setRowIconChoice(row, option); open = false" :title="option.label">
+                          <span class="svg-icon" x-html="renderIcon(option)"></span>
+                          <span class="favorite-toggle" @click.stop="toggleFavoriteIcon(option)" :aria-label="isFavoriteIcon(option) ? 'Remove favorite icon' : 'Favorite icon'" :title="isFavoriteIcon(option) ? 'Remove favorite' : 'Favorite'"></span>
+                        </button>
+                      </template>
+                    </div>
+                    <div class="icon-picker-empty-results" x-show="filteredIconOptions(iconQuery).length === 0">No matches</div>
+                  </div>
+                </div>
+                <input type="text" x-model="row.label" @input="syncRowFromFields(row)" placeholder="Weekly chore">
+                </div>
                 <label class="paid-checkbox">
                   <input type="checkbox" x-model="row.paid">
                   <span x-html="paidCoin"></span>
@@ -200,6 +229,7 @@
             <button type="button" @click="saveJson">Save JSON</button>
             <button type="button" @click="saveJsonAs">Save As</button>
             <button type="button" @click="openJsonFile">Open JSON</button>
+            <button type="button" @click="openShareDialog">Share JSON</button>
             <button type="button" @click="downloadJson">Download JSON</button>
             <label class="file-button">
               Import JSON
@@ -211,6 +241,26 @@
           <p class="text-sm text-red-700" x-show="importError" x-text="importError"></p>
         </section>
       </section>
+
+      <dialog class="share-dialog print:hidden" x-ref="shareDialog" @close="shareCopyStatus = ''">
+        <form method="dialog" class="share-dialog-panel">
+          <div class="share-dialog-header">
+            <div>
+              <h2>Share JSON</h2>
+              <p x-text="suggestedFileName()"></p>
+            </div>
+            <button type="submit" class="icon-button" aria-label="Close share dialog" title="Close share dialog" x-html="uiIcon('close')"></button>
+          </div>
+          <textarea x-ref="shareJsonTextArea" x-model="shareJsonText" readonly aria-label="Current chart JSON"></textarea>
+          <div class="share-dialog-actions">
+            <p x-show="shareCopyStatus" x-text="shareCopyStatus"></p>
+            <div class="button-row">
+              <button type="button" @click="copyShareJson">Copy JSON</button>
+              <button type="button" class="primary-button" @click="shareJson">Share</button>
+            </div>
+          </div>
+        </form>
+      </dialog>
 
       <section class="preview-panel" x-show="viewMode === 'preview'">
         <div class="preview-scroll screen-preview">
@@ -256,6 +306,7 @@
               <template x-for="(row, rowIndex) in activeChild.weeklyChores.rows" :key="row.id">
                 <div class="chart-cell weekly-cell" :style="`grid-column: ${weeklyCellGridColumn(rowIndex)}`">
                   <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
+                  <span class="icon-render svg-icon" x-show="row.type === 'icon'" x-html="renderIcon(row)"></span>
                   <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
                   <span x-show="row.type === 'regular'" x-text="row.label"></span>
                   <span class="write-line" x-show="row.type === 'empty'"></span>
@@ -312,6 +363,7 @@
               <template x-for="(row, rowIndex) in child.weeklyChores.rows" :key="`${child.id}-${row.id}`">
                 <div class="chart-cell weekly-cell" :style="`grid-column: ${weeklyCellGridColumn(rowIndex)}`">
                   <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
+                  <span class="icon-render svg-icon" x-show="row.type === 'icon'" x-html="renderIcon(row)"></span>
                   <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
                   <span x-show="row.type === 'regular'" x-text="row.label"></span>
                   <span class="write-line" x-show="row.type === 'empty'"></span>

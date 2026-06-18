@@ -5,6 +5,7 @@
   const CHART_KEY = "active-chart";
   const FILE_HANDLE_KEY = "json-file-handle";
   const INSTALL_PROMPT_DISMISSED_KEY = "chore-chart-install-dismissed";
+  const ICON_FAVORITES_KEY = "chore-chart-icon-favorites";
   const CHART_VERSION = 2;
   const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
   const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -121,6 +122,23 @@
     }
   }
 
+  function readLocalJson(key, fallback) {
+    try {
+      const value = window.localStorage.getItem(key);
+      return value ? JSON.parse(value) : fallback;
+    } catch (error) {
+      return fallback;
+    }
+  }
+
+  function writeLocalJson(key, value) {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      // Local storage can be unavailable in private or restricted browsing.
+    }
+  }
+
   function isStandaloneApp() {
     return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   }
@@ -183,12 +201,11 @@
     return Object.fromEntries(DAY_KEYS.map((key) => [key, defaultValue]));
   }
 
-  function choreRow(type, label = "", icon = "laundry", paid = false, selectedDays = daySelection(true), showIcon = type === "icon") {
+  function choreRow(type, label = "", icon = "wash-machine", paid = false, selectedDays = daySelection(true), showIcon = type === "icon") {
     return {
       id: uid(type),
       type,
       label,
-      iconType: "svg",
       icon,
       showIcon,
       paid,
@@ -196,24 +213,26 @@
     };
   }
 
-  function weeklyRow(type, label = "", paid = false) {
+  function weeklyRow(type, label = "", paid = false, icon = "", showIcon = type === "icon") {
     return {
       id: uid(`weekly-${type}`),
       type,
       label,
+      icon,
+      showIcon,
       paid
     };
   }
 
   function defaultSection(id, name) {
     const rows = [
-      choreRow("regular", "Laundry", "laundry", false, daySelection(true), true),
+      choreRow("regular", "Laundry", "wash-machine", false, daySelection(true), true),
       choreRow("regular", "Make bed", "bed", false, daySelection(true), true),
-      choreRow("regular", "Brush teeth", "toothbrush", false, daySelection(true), true)
+      choreRow("regular", "Brush teeth", "brush", false, daySelection(true), true)
     ];
 
     if (name === "Morning") {
-      rows.push(choreRow("regular", "Feed cat", "room"));
+      rows.push(choreRow("regular", "Feed cat", "cat"));
     }
 
     return { id, name, rows };
@@ -275,8 +294,16 @@
     return Object.fromEntries(DAY_KEYS.map((key) => [key, source[key] !== undefined ? Boolean(source[key]) : defaultValue]));
   }
 
-  function validIcon(icon) {
-    return window.ChoreChartIcons && window.ChoreChartIcons.svgIcons[icon] ? icon : "room";
+  function normalizeIconChoice(icon) {
+    const name = String(icon || "");
+    if (window.ChoreChartIcons && window.ChoreChartIcons.iconExists(name)) return name;
+
+    return "home";
+  }
+
+  function rowIconIsValid(row) {
+    if (!row || !row.icon) return false;
+    return window.ChoreChartIcons.iconExists(row.icon);
   }
 
   function rowHasIcon(row) {
@@ -295,12 +322,12 @@
   function normalizeChoreRow(row) {
     const savedType = ROW_TYPES.includes(row && row.type) ? row.type : "regular";
     const showIcon = savedType === "icon" || Boolean(row.showIcon);
+    const icon = normalizeIconChoice(row.icon || "home");
     const normalized = {
       id: row.id || uid(savedType),
       type: savedType,
       label: savedType === "empty" ? "" : String(row.label || ""),
-      iconType: "svg",
-      icon: showIcon ? validIcon(row.icon || "room") : "",
+      icon: showIcon ? icon : "",
       showIcon,
       paid: Boolean(row.paid),
       days: normalizeDays(row.days, true)
@@ -315,19 +342,33 @@
   }
 
   function normalizeWeeklyRow(row) {
-    const type = row && row.type === "empty" ? "empty" : "regular";
-    return {
-      id: row.id || uid(`weekly-${type}`),
-      type,
-      label: type === "empty" ? "" : String(row.label || ""),
+    const savedType = ROW_TYPES.includes(row && row.type) ? row.type : "regular";
+    const showIcon = savedType === "icon" || Boolean(row.showIcon);
+    const icon = normalizeIconChoice(row.icon || "home");
+    const normalized = {
+      id: row.id || uid(`weekly-${savedType}`),
+      type: savedType,
+      label: savedType === "empty" ? "" : String(row.label || ""),
+      icon: showIcon ? icon : "",
+      showIcon,
       paid: Boolean(row.paid)
+    };
+
+    normalized.type = inferRowType(normalized);
+    if (normalized.type === "empty") normalized.label = "";
+
+    return {
+      ...normalized
     };
   }
 
   function migrateLegacyIconRow(row) {
     const firstDay = row.cells && row.cells[DAY_KEYS[0]];
     if (!Array.isArray(firstDay)) return [];
-    return firstDay.map((slot) => choreRow("icon", "", validIcon(slot && slot.icon), Boolean(slot && slot.paid)));
+    return firstDay.map((slot) => {
+      const icon = normalizeIconChoice(slot && slot.icon);
+      return choreRow("icon", "", icon, Boolean(slot && slot.paid), daySelection(true), true);
+    });
   }
 
   function migrateLegacyTextRow(row) {
@@ -432,8 +473,13 @@
         for (const row of section.rows) {
           if (!ROW_TYPES.includes(row.type)) return "Daily rows must be icon, regular, or empty.";
           if (!row.days || DAY_KEYS.some((key) => typeof row.days[key] !== "boolean")) return "Every daily row needs Sunday-first day checkboxes.";
-          if (row.type === "icon" && !window.ChoreChartIcons.svgIcons[row.icon]) return `Unknown SVG icon: ${row.icon}`;
+          if (row.type === "icon" && !rowIconIsValid(row)) return `Unknown icon: ${row.icon}`;
         }
+      }
+
+      for (const row of child.weeklyChores.rows) {
+        if (!ROW_TYPES.includes(row.type)) return "Weekly rows must be icon, regular, or empty.";
+        if ((row.type === "icon" || row.showIcon) && !rowIconIsValid(row)) return `Unknown icon: ${row.icon}`;
       }
     }
 
@@ -453,10 +499,13 @@
       fileHandle: null,
       importError: "",
       dataStatus: "",
+      shareCopyStatus: "",
+      shareJsonText: "",
       installDismissed: false,
       installMode: "",
       installPromptEvent: null,
       installPromptVisible: false,
+      favoriteIconValues: [],
       saveChartDebounced: null,
       storageReady: false,
       printMode: "selected",
@@ -474,6 +523,7 @@
         });
 
         this.installDismissed = readLocalFlag(INSTALL_PROMPT_DISMISSED_KEY);
+        this.favoriteIconValues = readLocalJson(ICON_FAVORITES_KEY, []);
         this.setupInstallPrompt();
 
         this.chart = await loadStoredChart();
@@ -499,7 +549,7 @@
       },
 
       get paidCoin() {
-        return window.ChoreChartIcons.svgIcons.coin;
+        return window.ChoreChartIcons.uiIcon("coin");
       },
 
       get showInstallPrompt() {
@@ -519,7 +569,7 @@
       },
 
       uiIcon(name) {
-        return window.ChoreChartIcons.svgIcons[name] || "";
+        return window.ChoreChartIcons.uiIcon(name);
       },
 
       setupInstallPrompt() {
@@ -578,17 +628,24 @@
       },
 
       iconValue(row) {
-        return `${row.iconType || "svg"}:${row.icon || "room"}`;
+        return window.ChoreChartIcons.iconValue(row);
       },
 
       rowIconChoice(row) {
-        return rowHasIcon(row) ? validIcon(row.icon || "room") : "";
+        return rowHasIcon(row) ? normalizeIconChoice(row.icon || "home") : "";
       },
 
-      setRowIconChoice(row, value) {
-        row.iconType = "svg";
-        row.icon = value ? validIcon(value) : "";
-        row.showIcon = Boolean(value);
+      setRowIconChoice(row, option) {
+        const value = typeof option === "string" ? option : this.iconValue(option);
+        if (!value) {
+          row.icon = "";
+          row.showIcon = false;
+          row.type = inferRowType(row);
+          return;
+        }
+
+        row.icon = normalizeIconChoice(value);
+        row.showIcon = true;
         row.type = inferRowType(row);
       },
 
@@ -600,11 +657,103 @@
       normalizeRowForType(row) {
         if (!ROW_TYPES.includes(row.type)) row.type = "regular";
         row.days = normalizeDays(row.days, true);
-        row.iconType = "svg";
         row.showIcon = rowHasIcon(row);
-        row.icon = row.showIcon ? validIcon(row.icon || "room") : "";
+        row.icon = row.showIcon ? normalizeIconChoice(row.icon || "home") : "";
         row.type = inferRowType(row);
         if (row.type === "empty") row.label = "";
+      },
+
+      iconOptionByValue(value) {
+        return this.allIconOptions.find((option) => option.icon === value) || null;
+      },
+
+      get allIconOptions() {
+        return [
+          ...window.ChoreChartIcons.tablerOptions
+        ];
+      },
+
+      get favoriteIconOptions() {
+        return this.favoriteIconValues
+          .map((value) => this.iconOptionByValue(value))
+          .filter(Boolean);
+      },
+
+      filteredIconOptions(query = "") {
+        const terms = String(query || "").trim().toLowerCase().split(/\s+/).filter(Boolean);
+        const source = terms.length ? this.allIconOptions : [
+          ...this.favoriteIconOptions,
+          ...window.ChoreChartIcons.iconOptions
+        ];
+        const seen = new Set();
+        const filtered = source.map((option, index) => ({ option, index, score: this.iconSearchScore(option, terms) })).filter((result) => {
+          const option = result.option;
+          const value = this.iconValue(option);
+          if (seen.has(value)) return false;
+          seen.add(value);
+          return !terms.length || result.score < Number.POSITIVE_INFINITY;
+        }).sort((a, b) => a.score - b.score || a.index - b.index).map((result) => result.option);
+
+        return filtered.slice(0, 80);
+      },
+
+      iconSearchScore(option, terms) {
+        if (!terms.length) return 0;
+        const icon = option.icon.toLowerCase();
+        const label = option.label.toLowerCase();
+        const tags = Array.isArray(option.tags) ? option.tags.map((tag) => tag.toLowerCase()) : [];
+        const iconWords = icon.replace(/-/g, " ").split(/\s+/);
+        const labelWords = label.split(/\s+/);
+        const categoryWords = String(option.category || "").toLowerCase().split(/\s+/).filter(Boolean);
+        const words = [...iconWords, ...labelWords, ...categoryWords, ...tags];
+        const searchable = option.search || words.join(" ");
+        let score = 0;
+
+        for (const term of terms) {
+          const exactTagIndex = tags.findIndex((tag) => tag === term);
+          const prefixTagIndex = tags.findIndex((tag) => tag.startsWith(term));
+
+          if (icon === term || label === term) {
+            score += 0;
+          } else if (icon.startsWith(term) || label.startsWith(term)) {
+            score += 1;
+          } else if (iconWords.some((word) => word === term) || labelWords.some((word) => word === term)) {
+            score += 2;
+          } else if (exactTagIndex >= 0) {
+            score += 3 + exactTagIndex / 10;
+          } else if (iconWords.some((word) => word.startsWith(term)) || labelWords.some((word) => word.startsWith(term))) {
+            score += 4;
+          } else if (prefixTagIndex >= 0) {
+            score += 6 + prefixTagIndex / 10;
+          } else if (categoryWords.some((word) => word === term || word.startsWith(term))) {
+            score += 8;
+          } else if (searchable.includes(term)) {
+            score += 12;
+          } else {
+            return Number.POSITIVE_INFINITY;
+          }
+        }
+
+        if (icon.endsWith("-off")) score += 8;
+        if (/-\d+$/.test(icon)) score += 1;
+
+        return score;
+      },
+
+      favoriteIconCount() {
+        return this.favoriteIconOptions.length;
+      },
+
+      isFavoriteIcon(option) {
+        return this.favoriteIconValues.includes(this.iconValue(option));
+      },
+
+      toggleFavoriteIcon(option) {
+        const value = this.iconValue(option);
+        this.favoriteIconValues = this.isFavoriteIcon(option)
+          ? this.favoriteIconValues.filter((favorite) => favorite !== value)
+          : [value, ...this.favoriteIconValues].slice(0, 48);
+        writeLocalJson(ICON_FAVORITES_KEY, this.favoriteIconValues);
       },
 
       renderIcon(row) {
@@ -729,8 +878,8 @@
         moveItem(rows, index, direction);
       },
 
-      addWeeklyRow(type) {
-        this.activeChild.weeklyChores.rows.push(weeklyRow(type, type === "regular" ? "New weekly chore" : ""));
+      addWeeklyRow() {
+        this.activeChild.weeklyChores.rows.push(weeklyRow("empty", "", false, "", false));
       },
 
       deleteWeeklyRow(index) {
@@ -742,7 +891,9 @@
       },
 
       normalizeWeeklyRow(row) {
-        if (row.type !== "empty") row.type = "regular";
+        row.showIcon = rowHasIcon(row);
+        row.icon = row.showIcon ? normalizeIconChoice(row.icon || "home") : "";
+        row.type = inferRowType(row);
         if (row.type === "empty") row.label = "";
       },
 
@@ -759,6 +910,82 @@
         link.click();
         URL.revokeObjectURL(url);
         this.dataStatus = "Downloaded JSON file.";
+      },
+
+      refreshShareJson() {
+        this.shareJsonText = chartJson(this.chart);
+      },
+
+      openShareDialog() {
+        this.importError = "";
+        this.shareCopyStatus = "";
+        this.refreshShareJson();
+
+        if (this.$refs.shareDialog && this.$refs.shareDialog.showModal) {
+          this.$refs.shareDialog.showModal();
+          return;
+        }
+
+        this.copyShareJson();
+      },
+
+      async copyShareJson() {
+        this.refreshShareJson();
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(this.shareJsonText);
+          } else {
+            this.$nextTick(() => {
+              this.$refs.shareJsonTextArea.focus();
+              this.$refs.shareJsonTextArea.select();
+              document.execCommand("copy");
+            });
+          }
+
+          this.shareCopyStatus = "Copied JSON.";
+          this.dataStatus = "Copied JSON to clipboard.";
+        } catch (error) {
+          console.error("Could not copy JSON.", error);
+          this.shareCopyStatus = "Could not copy JSON.";
+        }
+      },
+
+      async shareJson() {
+        this.importError = "";
+        this.refreshShareJson();
+
+        if (!navigator.share) {
+          await this.copyShareJson();
+          return;
+        }
+
+        const file = new File([this.shareJsonText], this.suggestedFileName(), { type: "application/json" });
+        const filePayload = {
+          title: "Chore chart JSON",
+          text: `${this.activeChild.childName}'s chore chart JSON`,
+          files: [file]
+        };
+
+        try {
+          if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+            await navigator.share(filePayload);
+          } else {
+            await navigator.share({
+              title: filePayload.title,
+              text: this.shareJsonText
+            });
+          }
+
+          this.dataStatus = "Shared JSON.";
+          if (this.$refs.shareDialog && this.$refs.shareDialog.open) {
+            this.$refs.shareDialog.close();
+          }
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          console.error("Could not share JSON.", error);
+          this.shareCopyStatus = "Could not share JSON.";
+        }
       },
 
       async saveJson() {

@@ -1,10 +1,11 @@
-const CACHE_NAME = "chore-charts-v15";
+const CACHE_NAME = "chore-charts-v17";
 const APP_SHELL = [
   "./",
   "index.html",
   "assets/app.js",
   "assets/app.css",
   "assets/icons.js",
+  "assets/tabler-icons.js",
   "assets/icon-192.svg",
   "assets/icon-512.svg",
   "manifest.webmanifest"

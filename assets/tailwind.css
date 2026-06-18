@@ -162,6 +162,32 @@
     @apply mt-2 text-sm text-slate-600;
   }
 
+  .share-dialog {
+    @apply m-auto w-[min(92vw,720px)] rounded-lg border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/40;
+  }
+
+  .share-dialog-panel {
+    @apply grid gap-3 p-4;
+  }
+
+  .share-dialog-header,
+  .share-dialog-actions {
+    @apply flex flex-wrap items-center justify-between gap-3;
+  }
+
+  .share-dialog-header h2 {
+    @apply text-base font-semibold text-slate-950;
+  }
+
+  .share-dialog-header p,
+  .share-dialog-actions p {
+    @apply text-sm text-slate-500;
+  }
+
+  .share-dialog textarea {
+    @apply min-h-[320px] w-full resize-y rounded-md border border-slate-300 bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-800 shadow-inner focus:border-slate-700 focus:outline-none focus:ring-1 focus:ring-slate-700;
+  }
+
   .segmented {
     @apply inline-grid grid-cols-2 rounded-md border border-slate-300 bg-slate-100 p-1;
   }
@@ -227,7 +253,7 @@
 
   .chore-grid,
   .weekly-grid {
-    @apply mt-4 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2 lg:overflow-x-auto;
+    @apply mt-4 min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-2;
   }
 
   .chore-list,
@@ -263,8 +289,13 @@
 
   .weekly-editor-row > select,
   .weekly-editor-row > input,
-  .weekly-editor-row > .empty-row-label {
+  .weekly-editor-row > .empty-row-label,
+  .weekly-name-cell {
     @apply w-full;
+  }
+
+  .weekly-name-cell {
+    @apply grid min-w-0 grid-cols-[minmax(110px,0.45fr)_minmax(140px,1fr)] gap-2;
   }
 
   .day-check-heading,
@@ -274,19 +305,19 @@
   }
 
   .chore-name-cell {
-    @apply col-span-full grid min-h-11 grid-cols-[32px_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white p-0 ring-0 lg:col-auto lg:grid-cols-[32px_140px_minmax(170px,1fr)] lg:p-2 lg:ring-1 lg:ring-slate-200;
+    @apply col-span-full grid min-h-11 grid-cols-[32px_auto_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white p-0 ring-0 lg:col-auto lg:grid-cols-[32px_auto_minmax(170px,1fr)] lg:p-2 lg:ring-1 lg:ring-slate-200;
     min-width: 0;
   }
 
-  .chore-name-cell > select,
+  .chore-name-cell > .icon-picker,
   .chore-name-cell > input,
   .chore-name-cell > .empty-row-label {
-    grid-column: 2;
+    grid-column: auto;
   }
 
   .regular-label-input,
   .daily-empty-label {
-    grid-column: 2;
+    grid-column: auto;
   }
 
   .empty-row-label {
@@ -360,6 +391,67 @@
     @apply h-5 w-5;
   }
 
+  .icon-picker {
+    @apply relative;
+  }
+
+  .icon-picker-trigger {
+    @apply flex h-9 w-full min-w-[3.5rem] items-center justify-center rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-500 shadow-sm cursor-pointer hover:bg-slate-50 hover:border-slate-400;
+  }
+
+  .icon-picker-preview svg {
+    @apply h-5 w-5;
+  }
+
+  .icon-picker-empty {
+    @apply text-xs font-medium text-slate-400;
+  }
+
+  .icon-picker-dropdown {
+    @apply absolute top-full left-0 z-50 mt-1 rounded-lg border border-slate-200 bg-white p-2 shadow-lg;
+    width: min(22rem, calc(100vw - 2rem));
+  }
+
+  .icon-picker-search {
+    @apply mb-2 h-8 w-full rounded-md border border-slate-300 px-2 text-xs text-slate-700 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200;
+  }
+
+  .icon-picker-grid {
+    @apply grid max-h-64 grid-cols-6 gap-1 overflow-y-auto pr-1;
+  }
+
+  .icon-picker-option {
+    @apply relative flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent cursor-pointer p-1 hover:bg-slate-100 hover:border-slate-200;
+  }
+
+  .icon-picker-option.active {
+    @apply bg-slate-200 border-slate-300;
+  }
+
+  .icon-picker-option.favorite {
+    @apply border-amber-200 bg-amber-50;
+  }
+
+  .favorite-toggle {
+    @apply absolute right-0.5 top-0.5 h-2 w-2 rounded-full border border-amber-500 bg-white;
+  }
+
+  .icon-picker-option.favorite .favorite-toggle {
+    @apply bg-amber-400;
+  }
+
+  .icon-picker-option .svg-icon svg {
+    @apply h-5 w-5;
+  }
+
+  .icon-picker-none {
+    @apply text-[10px] font-medium text-slate-400 uppercase;
+  }
+
+  .icon-picker-empty-results {
+    @apply px-2 py-3 text-center text-xs font-medium text-slate-400;
+  }
+
   @screen sm {
     .print-actions {
       display: flex;
@@ -374,26 +466,6 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
-    .weekly-editor-row {
-      grid-template-columns: minmax(130px, 0.45fr) minmax(0, 1fr);
-    }
-
-    .weekly-editor-row > select {
-      grid-column: 1;
-    }
-
-    .weekly-editor-row > input,
-    .weekly-editor-row > .empty-row-label {
-      grid-column: 2;
-    }
-
-    .weekly-editor-row > .paid-checkbox {
-      grid-column: 1;
-    }
-
-    .weekly-editor-row > .row-move-actions {
-      grid-column: 2;
-    }
   }
 
   @screen lg {
@@ -402,10 +474,10 @@
     }
 
     .weekly-editor-row {
-      grid-template-columns: minmax(130px, 0.4fr) minmax(300px, 1.6fr) minmax(58px, 0.3fr) minmax(178px, 0.8fr);
+      grid-template-columns: minmax(390px, 1fr) minmax(58px, 0.3fr) max-content;
     }
 
-    .chore-name-cell > select,
+    .chore-name-cell > .icon-picker,
     .chore-name-cell > input,
     .chore-name-cell > .empty-row-label {
       grid-column: auto;
@@ -418,6 +490,7 @@
     .weekly-editor-row > select,
     .weekly-editor-row > input,
     .weekly-editor-row > .empty-row-label,
+    .weekly-name-cell,
     .weekly-editor-row > .paid-checkbox,
     .weekly-editor-row > .row-move-actions {
       grid-column: auto;
