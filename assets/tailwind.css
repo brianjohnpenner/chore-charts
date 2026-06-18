@@ -295,7 +295,7 @@
   }
 
   .weekly-name-cell {
-    @apply grid min-w-0 grid-cols-[minmax(110px,0.45fr)_minmax(140px,1fr)] gap-2;
+    @apply grid min-w-0 grid-cols-[minmax(110px,auto)_minmax(0,1fr)] gap-2;
   }
 
   .day-check-heading,
@@ -305,14 +305,44 @@
   }
 
   .chore-name-cell {
-    @apply col-span-full grid min-h-11 grid-cols-[32px_auto_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white p-0 ring-0 lg:col-auto lg:grid-cols-[32px_auto_minmax(170px,1fr)] lg:p-2 lg:ring-1 lg:ring-slate-200;
+    @apply col-span-full grid min-h-11 grid-cols-[32px_auto_minmax(0,1fr)] items-center gap-2 rounded-lg bg-white p-0 ring-0 lg:col-auto lg:grid-cols-[32px_auto_minmax(220px,1fr)] lg:p-2 lg:ring-1 lg:ring-slate-200;
     min-width: 0;
   }
 
   .chore-name-cell > .icon-picker,
+  .chore-name-cell > .chore-label-field,
   .chore-name-cell > input,
   .chore-name-cell > .empty-row-label {
     grid-column: auto;
+  }
+
+  .chore-label-field {
+    @apply relative min-w-0;
+  }
+
+  .chore-label-field .regular-label-input,
+  .weekly-name-cell .chore-label-field input {
+    @apply w-full pr-9;
+  }
+
+  .show-label-toggle {
+    @apply absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30;
+  }
+
+  .show-label-toggle-icon {
+    @apply flex items-center justify-center;
+  }
+
+  .show-label-toggle-icon svg {
+    @apply h-4 w-4;
+  }
+
+  .show-label-toggle:not(:disabled) .show-label-toggle-icon {
+    @apply text-slate-600;
+  }
+
+  .show-label-toggle:focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-slate-700;
   }
 
   .regular-label-input,
@@ -478,6 +508,7 @@
     }
 
     .chore-name-cell > .icon-picker,
+    .chore-name-cell > .chore-label-field,
     .chore-name-cell > input,
     .chore-name-cell > .empty-row-label {
       grid-column: auto;
@@ -547,7 +578,18 @@
   }
 
   .icon-cell {
-    height: 0.46in;
+    min-height: 0.38in;
+    padding-top: 0.05in;
+    padding-bottom: 0.05in;
+  }
+
+  .icon-only-cell {
+    min-height: 0.38in;
+    justify-content: center;
+    padding-top: 0.05in;
+    padding-bottom: 0.05in;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
   }
 
   .text-cell,
@@ -571,7 +613,12 @@
   }
 
   .icon-render {
-    @apply text-[24px] leading-none;
+    @apply leading-none;
+  }
+
+  .icon-cell .icon-render svg,
+  .icon-only-cell .icon-render svg {
+    @apply h-5 w-5;
   }
 
   .svg-icon svg {
@@ -713,7 +760,15 @@
   }
 
   .icon-cell {
-    height: 0.42in;
+    min-height: 0.34in;
+    padding-top: 0.04in;
+    padding-bottom: 0.04in;
+  }
+
+  .icon-only-cell {
+    min-height: 0.34in;
+    padding-top: 0.04in;
+    padding-bottom: 0.04in;
   }
 
   .text-cell,

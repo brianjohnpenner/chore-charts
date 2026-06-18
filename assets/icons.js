@@ -6,7 +6,9 @@
     arrowDown: "arrow-down",
     plus: "plus",
     delete: "trash",
-    close: "x"
+    close: "x",
+    eye: "eye",
+    eyeOff: "eye-off"
   };
 
   const suggestedTablerIcons = [

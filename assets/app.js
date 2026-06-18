@@ -201,25 +201,27 @@
     return Object.fromEntries(DAY_KEYS.map((key) => [key, defaultValue]));
   }
 
-  function choreRow(type, label = "", icon = "wash-machine", paid = false, selectedDays = daySelection(true), showIcon = type === "icon") {
+  function choreRow(type, label = "", icon = "wash-machine", paid = false, selectedDays = daySelection(true), showIcon = type === "icon", showLabel = type !== "icon") {
     return {
       id: uid(type),
       type,
       label,
       icon,
       showIcon,
+      showLabel,
       paid,
       days: selectedDays
     };
   }
 
-  function weeklyRow(type, label = "", paid = false, icon = "", showIcon = type === "icon") {
+  function weeklyRow(type, label = "", paid = false, icon = "", showIcon = type === "icon", showLabel = type !== "icon") {
     return {
       id: uid(`weekly-${type}`),
       type,
       label,
       icon,
       showIcon,
+      showLabel,
       paid
     };
   }
@@ -310,6 +312,18 @@
     return row && (row.type === "icon" || Boolean(row.showIcon));
   }
 
+  function rowShowsIconOnly(row) {
+    return row.type === "icon" || (row.type === "regular" && rowHasIcon(row) && row.showLabel === false);
+  }
+
+  function rowShowsLabel(row) {
+    return row.type === "regular" && row.showLabel !== false && Boolean(String(row.label || "").trim());
+  }
+
+  function rowShowsInlineIcon(row) {
+    return row.type === "regular" && rowHasIcon(row) && row.showLabel !== false;
+  }
+
   function inferRowType(row) {
     const hasIcon = rowHasIcon(row);
     const hasLabel = Boolean(String(row && row.label || "").trim());
@@ -317,6 +331,21 @@
     if (hasIcon && !hasLabel) return "icon";
     if (hasLabel) return "regular";
     return "empty";
+  }
+
+  function labelFromIcon(icon) {
+    const name = String(icon || "home");
+    if (window.ChoreChartIcons && Array.isArray(window.ChoreChartIcons.tablerOptions)) {
+      const option = window.ChoreChartIcons.tablerOptions.find((item) => item.icon === name);
+      if (option && option.label) return option.label;
+    }
+
+    return name.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  function normalizeShowLabel(row, savedType) {
+    if (row && row.showLabel !== undefined) return row.showLabel !== false;
+    return savedType !== "icon";
   }
 
   function normalizeChoreRow(row) {
@@ -329,12 +358,19 @@
       label: savedType === "empty" ? "" : String(row.label || ""),
       icon: showIcon ? icon : "",
       showIcon,
+      showLabel: normalizeShowLabel(row, savedType),
       paid: Boolean(row.paid),
       days: normalizeDays(row.days, true)
     };
 
     normalized.type = inferRowType(normalized);
     if (normalized.type === "empty") normalized.label = "";
+
+    if (savedType === "icon" && !String(row.label || "").trim()) {
+      normalized.label = labelFromIcon(icon);
+      normalized.showLabel = false;
+      normalized.type = inferRowType(normalized);
+    }
 
     return {
       ...normalized
@@ -351,11 +387,18 @@
       label: savedType === "empty" ? "" : String(row.label || ""),
       icon: showIcon ? icon : "",
       showIcon,
+      showLabel: normalizeShowLabel(row, savedType),
       paid: Boolean(row.paid)
     };
 
     normalized.type = inferRowType(normalized);
     if (normalized.type === "empty") normalized.label = "";
+
+    if (savedType === "icon" && !String(row.label || "").trim()) {
+      normalized.label = labelFromIcon(icon);
+      normalized.showLabel = false;
+      normalized.type = inferRowType(normalized);
+    }
 
     return {
       ...normalized
@@ -651,6 +694,7 @@
 
       syncRowFromFields(row) {
         row.label = String(row.label || "");
+        if (row.showLabel === undefined) row.showLabel = true;
         row.type = inferRowType(row);
       },
 
@@ -760,12 +804,20 @@
         return window.ChoreChartIcons.renderIcon(row);
       },
 
+      rowShowsLabel(row) {
+        return row.type === "regular" && row.showLabel !== false && Boolean(String(row.label || "").trim());
+      },
+
+      rowShowsIconOnly(row) {
+        return row.type === "icon" || (row.type === "regular" && rowHasIcon(row) && row.showLabel === false);
+      },
+
       rowShowsInlineIcon(row) {
-        return row.type === "regular" && rowHasIcon(row);
+        return row.type === "regular" && rowHasIcon(row) && row.showLabel !== false;
       },
 
       sectionIconGroups(section) {
-        const icons = section.rows.filter((row) => row.type === "icon");
+        const icons = section.rows.filter((row) => this.rowShowsIconOnly(row));
         const groups = [];
         for (let i = 0; i < icons.length; i += 3) {
           groups.push({ id: `${section.id}-icons-${i}`, rows: icons.slice(i, i + 3) });
@@ -774,21 +826,19 @@
       },
 
       sectionDetailRows(section) {
-        return section.rows.filter((row) => row.type !== "icon");
+        return section.rows.filter((row) => !this.rowShowsIconOnly(row));
       },
 
       printIconCells(group, child = this.activeChild) {
         return child.days.flatMap((day, dayIndex) => group.rows
           .filter((row) => row && row.days[day.key])
-          .map((row, slotIndex) => {
-            return {
-              key: `${group.id}-${day.key}-${row.id}`,
-              color: day.color,
-              gridColumn: dayIndex * 3 + slotIndex + 1,
-              row,
-              visible: true
-            };
-          }));
+          .map((row, slotIndex) => ({
+            key: `${group.id}-${day.key}-${row.id}`,
+            color: day.color,
+            gridColumn: dayIndex * 3 + slotIndex + 1,
+            row,
+            visible: true
+          })));
       },
 
       printDayCells(row, child = this.activeChild) {
