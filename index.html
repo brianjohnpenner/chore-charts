@@ -12,7 +12,7 @@
     <script defer src="assets/app.js?v=18"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=27">
+    <link rel="stylesheet" href="assets/app.css?v=33">
   </head>
   <body>
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
@@ -106,16 +106,14 @@
                   <div class="grid-heading day-check-heading" x-text="day.label"></div>
                 </template>
                 <div class="grid-heading paid-heading">Paid</div>
-                <div class="row-move-actions action-heading-spacer" aria-hidden="true">
-                  <span class="icon-button" aria-hidden="true" x-html="uiIcon('delete')"></span>
-                </div>
+                <span class="icon-button action-heading-spacer" aria-hidden="true" x-html="uiIcon('grip')"></span>
+                <span class="icon-button action-heading-spacer" aria-hidden="true" x-html="uiIcon('delete')"></span>
               </div>
 
               <div class="chore-list" x-sort="sortRows(section.rows, $item, $position)">
               <template x-for="(row, rowIndex) in section.rows" :key="row.id">
                 <div class="chore-editor-row" x-sort:item="row.id">
                   <div class="chore-name-cell">
-                    <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag chore" title="Drag chore" x-html="uiIcon('grip')"></button>
                     <div class="icon-picker" x-data="{ open: false, iconQuery: '' }">
                       <button type="button" class="icon-picker-trigger" @click="open = !open" aria-label="Pick icon">
                         <span class="icon-picker-preview svg-icon" x-show="rowIconChoice(row)" x-html="renderIcon(row)"></span>
@@ -158,9 +156,8 @@
                     <span x-html="paidCoin"></span>
                   </label>
 
-                  <div class="row-move-actions">
-                    <button type="button" class="icon-button danger-button" @click="deleteRow(section, rowIndex)" aria-label="Delete chore" title="Delete chore" x-html="uiIcon('delete')"></button>
-                  </div>
+                  <button type="button" class="icon-button drag-button chore-row-drag" x-sort:handle aria-label="Drag chore" title="Drag chore" x-html="uiIcon('grip')"></button>
+                  <button type="button" class="icon-button danger-button chore-row-delete" @click="deleteRow(section, rowIndex)" aria-label="Delete chore" title="Delete chore" x-html="uiIcon('delete')"></button>
                 </div>
               </template>
               </div>
@@ -186,10 +183,8 @@
             <div class="weekly-editor-row weekly-grid-header">
               <div class="grid-heading">Weekly chore</div>
               <div class="grid-heading">Paid</div>
-              <div class="row-move-actions action-heading-spacer" aria-hidden="true">
-                <span class="icon-button" aria-hidden="true" x-html="uiIcon('grip')"></span>
-                <span class="icon-button" aria-hidden="true" x-html="uiIcon('delete')"></span>
-              </div>
+              <span class="icon-button action-heading-spacer" aria-hidden="true" x-html="uiIcon('grip')"></span>
+              <span class="icon-button action-heading-spacer" aria-hidden="true" x-html="uiIcon('delete')"></span>
             </div>
 
             <div class="weekly-list" x-sort="sortRows(activeChild.weeklyChores.rows, $item, $position)">
@@ -228,10 +223,8 @@
                   <input type="checkbox" x-model="row.paid">
                   <span x-html="paidCoin"></span>
                 </label>
-                <div class="row-move-actions">
-                  <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag weekly chore" title="Drag weekly chore" x-html="uiIcon('grip')"></button>
-                  <button type="button" class="icon-button danger-button" @click="deleteWeeklyRow(rowIndex)" aria-label="Delete weekly chore" title="Delete weekly chore" x-html="uiIcon('delete')"></button>
-                </div>
+                <button type="button" class="icon-button drag-button" x-sort:handle aria-label="Drag weekly chore" title="Drag weekly chore" x-html="uiIcon('grip')"></button>
+                <button type="button" class="icon-button danger-button" @click="deleteWeeklyRow(rowIndex)" aria-label="Delete weekly chore" title="Delete weekly chore" x-html="uiIcon('delete')"></button>
               </div>
             </template>
             </div>
