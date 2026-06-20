@@ -8,7 +8,10 @@
     delete: "trash",
     close: "x",
     eye: "eye",
-    eyeOff: "eye-off"
+    eyeOff: "eye-off",
+    help: "help-circle",
+    info: "info-circle",
+    bulb: "bulb"
   };
 
   const suggestedTablerIcons = [

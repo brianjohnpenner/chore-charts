@@ -1,4 +1,4 @@
-const CACHE_NAME = "chore-charts-v19";
+const CACHE_NAME = "chore-charts-v20";
 const APP_SHELL = [
   "./",
   "index.html",

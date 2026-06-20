@@ -6,6 +6,7 @@
   const FILE_HANDLE_KEY = "json-file-handle";
   const INSTALL_PROMPT_DISMISSED_KEY = "chore-chart-install-dismissed";
   const ICON_FAVORITES_KEY = "chore-chart-icon-favorites";
+  const WELCOME_SEEN_KEY = "chore-chart-welcome-seen";
   const CHART_VERSION = 2;
   const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
   const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -551,6 +552,7 @@
       favoriteIconValues: [],
       saveChartDebounced: null,
       storageReady: false,
+      welcomeSeen: false,
       printMode: "selected",
       viewMode: new URLSearchParams(window.location.search).get("view") === "preview" ? "preview" : "edit",
 
@@ -567,11 +569,14 @@
 
         this.installDismissed = readLocalFlag(INSTALL_PROMPT_DISMISSED_KEY);
         this.favoriteIconValues = readLocalJson(ICON_FAVORITES_KEY, []);
+        this.welcomeSeen = readLocalFlag(WELCOME_SEEN_KEY);
         this.setupInstallPrompt();
 
         this.chart = await loadStoredChart();
         this.fileHandle = await loadFileHandle();
         this.storageReady = true;
+
+        if (!this.welcomeSeen) this.openHelp(true);
 
         this.$watch("chart", (chart) => {
           if (!this.storageReady) return;
@@ -613,6 +618,25 @@
 
       uiIcon(name) {
         return window.ChoreChartIcons.uiIcon(name);
+      },
+
+      openHelp(markSeen = false) {
+        if (markSeen && !this.welcomeSeen) {
+          this.welcomeSeen = true;
+          writeLocalFlag(WELCOME_SEEN_KEY);
+        }
+
+        this.$nextTick(() => {
+          const dialog = this.$refs.helpDialog;
+          if (dialog && dialog.showModal && !dialog.open) {
+            dialog.showModal();
+          }
+        });
+      },
+
+      closeHelp() {
+        const dialog = this.$refs.helpDialog;
+        if (dialog && dialog.open) dialog.close();
       },
 
       setupInstallPrompt() {

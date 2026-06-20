@@ -505,6 +505,125 @@ img, svg, video {
   box-shadow: 0 0 0 1px var(--color-slate-700);
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-button {
+  border-color: var(--color-border);
+  background-color: var(--color-white);
+  color: var(--color-slate-600);
+}
+
+.help-button:hover {
+  background-color: var(--color-slate-50);
+  color: var(--color-accent);
+}
+
+.section-hint {
+  margin-top: 0.25rem;
+  margin-bottom: 0.5rem;
+  max-width: 70ch;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: var(--color-muted);
+}
+
+.help-dialog {
+  margin: auto;
+  width: min(92vw, 640px);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-ring);
+  background-color: var(--color-white);
+  padding: 0px;
+  box-shadow: var(--shadow-2xl);
+}
+
+.help-dialog::backdrop {
+  background-color: rgb(2 6 23 / 0.4);
+}
+
+.help-dialog-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.help-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.help-dialog-header h2 {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.help-dialog-header p {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--color-muted);
+}
+
+.help-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: var(--color-slate-800);
+}
+
+.help-steps,
+.help-points {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.35rem;
+  color: var(--color-slate-700);
+}
+
+.help-inline-icon {
+  display: inline-flex;
+  vertical-align: -0.15em;
+  color: var(--color-slate-600);
+}
+
+.help-inline-icon svg {
+  height: 1rem;
+  width: 1rem;
+}
+
+.help-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-ring);
+  padding-top: 1rem;
+}
+
+.help-reopen-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: var(--color-muted);
+}
+
 .segmented {
   display: inline-grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1642,7 +1761,8 @@ img, svg, video {
   }
 
   .editor-panel,
-  .editor-workspace {
+  .editor-workspace,
+  .help-dialog {
     display: none !important;
   }
 
