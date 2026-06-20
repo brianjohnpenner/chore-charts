@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "chore-charts",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "serve", "-l", "5599", "."],
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5599"],
       "port": 5599
     }
   ]

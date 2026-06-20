@@ -9,10 +9,10 @@
     <link rel="icon" href="assets/icon-192.svg" type="image/svg+xml">
     <script defer src="assets/icons.js?v=13"></script>
     <script defer src="assets/tabler-icons.js?v=1"></script>
-    <script defer src="assets/app.js?v=18"></script>
+    <script defer src="assets/app.js?v=19"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="assets/app.css?v=35">
+    <link rel="stylesheet" href="assets/app.css?v=36">
   </head>
   <body>
     <main x-data="choreChartApp" x-cloak class="app-shell" :class="{ 'printing-all': printMode === 'all', 'printing-selected': printMode === 'selected' }">
@@ -78,7 +78,20 @@
             <template x-for="day in activeChild.days" :key="day.key">
               <div class="day-control">
                 <input type="text" x-model="day.label" aria-label="Day label">
-                <input type="color" x-model="day.color" :aria-label="`${day.label} color`">
+                <div class="color-picker" x-data="{ open: false }">
+                  <button type="button" class="color-picker-trigger" @click="open = !open" :style="`--cell-color: ${day.color}; --cell-text: ${cellTextColor(day.color)}`" :aria-label="`${day.label} color`">
+                    <span>Aa</span>
+                  </button>
+                  <div class="color-picker-dropdown" x-show="open" @click.outside="open = false" x-transition>
+                    <div class="color-picker-grid">
+                      <template x-for="option in dayColorOptions" :key="option.family">
+                        <button type="button" class="color-picker-option" :class="{ active: dayColorActive(day, option) }" :style="`background-color: ${option.color}; color: ${option.text}`" @click="day.color = option.color; open = false" :title="option.family" :aria-label="option.family">
+                          <span>Aa</span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </div>
               </div>
             </template>
           </div>
@@ -277,7 +290,7 @@
             <h1 class="chart-title" x-text="`${activeChild.childName}'s Responsibility Chart`"></h1>
             <div class="chart-grid">
               <template x-for="day in activeChild.days" :key="`header-${day.key}`">
-                <div class="day-header" :style="`grid-column: span 3; background-color: ${day.color}`" x-text="day.label"></div>
+                <div class="day-header" :style="`grid-column: span 3; --cell-color: ${day.color}; --cell-text: ${cellTextColor(day.color)}`" x-text="day.label"></div>
               </template>
 
               <template x-for="section in activeChild.sections" :key="section.id">
@@ -287,7 +300,7 @@
                   <template x-for="group in sectionIconGroups(section)" :key="group.id">
                     <div class="contents">
                       <template x-for="cell in printIconCells(group)" :key="cell.key">
-                        <div class="chart-cell icon-cell" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
+                        <div class="chart-cell icon-cell" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; --cell-color: ${cell.color}; --cell-text: ${cellTextColor(cell.color)}`">
                           <span class="paid-marker" x-show="cell.row.paid" x-html="paidCoin"></span>
                           <span class="icon-render svg-icon" x-html="renderIcon(cell.row)"></span>
                         </div>
@@ -298,7 +311,7 @@
                   <template x-for="row in sectionDetailRows(section)" :key="row.id">
                     <div class="contents">
                       <template x-for="cell in printDayCells(row)" :key="cell.key">
-                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
+                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; --cell-color: ${cell.color}; --cell-text: ${cellTextColor(cell.color)}`">
                           <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
                           <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
                           <span x-show="rowShowsLabel(row)" x-text="row.label"></span>
@@ -334,7 +347,7 @@
             <h1 class="chart-title" x-text="`${child.childName}'s Responsibility Chart`"></h1>
             <div class="chart-grid">
               <template x-for="day in child.days" :key="`${child.id}-header-${day.key}`">
-                <div class="day-header" :style="`grid-column: span 3; background-color: ${day.color}`" x-text="day.label"></div>
+                <div class="day-header" :style="`grid-column: span 3; --cell-color: ${day.color}; --cell-text: ${cellTextColor(day.color)}`" x-text="day.label"></div>
               </template>
 
               <template x-for="section in child.sections" :key="`${child.id}-${section.id}`">
@@ -344,7 +357,7 @@
                   <template x-for="group in sectionIconGroups(section)" :key="`${child.id}-${group.id}`">
                     <div class="contents">
                       <template x-for="cell in printIconCells(group, child)" :key="`${child.id}-${cell.key}`">
-                        <div class="chart-cell icon-cell" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
+                        <div class="chart-cell icon-cell" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; --cell-color: ${cell.color}; --cell-text: ${cellTextColor(cell.color)}`">
                           <span class="paid-marker" x-show="cell.row.paid" x-html="paidCoin"></span>
                           <span class="icon-render svg-icon" x-html="renderIcon(cell.row)"></span>
                         </div>
@@ -355,7 +368,7 @@
                   <template x-for="row in sectionDetailRows(section)" :key="`${child.id}-${row.id}`">
                     <div class="contents">
                       <template x-for="cell in printDayCells(row, child)" :key="`${child.id}-${cell.key}`">
-                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; background-color: ${cell.color}`">
+                        <div class="chart-cell" :class="row.type === 'empty' ? 'write-cell' : 'text-cell'" :style="`display: ${cell.visible ? 'flex' : 'none'}; grid-column: ${cell.gridColumn}; --cell-color: ${cell.color}; --cell-text: ${cellTextColor(cell.color)}`">
                           <span class="paid-marker" x-show="row.paid" x-html="paidCoin"></span>
                           <span class="regular-chore-icon svg-icon" x-show="rowShowsInlineIcon(row)" x-html="renderIcon(row)"></span>
                           <span x-show="rowShowsLabel(row)" x-text="row.label"></span>
