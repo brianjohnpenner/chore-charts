@@ -7,7 +7,7 @@
     <title>Chore Charts</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="assets/icon-192.svg" type="image/svg+xml">
-    <script defer src="assets/icons.js?v=13"></script>
+    <script defer src="assets/icons.js?v=14"></script>
     <script defer src="assets/tabler-icons.js?v=1"></script>
     <script defer src="assets/app.js?v=19"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/sort@3.x.x/dist/cdn.min.js"></script>
@@ -19,14 +19,17 @@
       <header class="editor-panel">
         <div class="editor-header">
           <div>
-            <h1>Chore Charts</h1>
-            <p>Build the chart by row, then preview or print.</p>
+            <div class="title-row">
+              <h1>Chore Charts</h1>
+              <button type="button" class="icon-button help-button" @click="openHelp()" aria-label="How to use Chore Charts" title="How to use Chore Charts" x-html="uiIcon('help')"></button>
+            </div>
+            <p>Build the chart by row, then preview or print. New here? Tap the <span aria-hidden="true">?</span> button for a quick tour.</p>
           </div>
           <div class="print-actions">
-            <button type="button" :class="{ active: viewMode === 'edit' }" @click="viewMode = 'edit'">Edit</button>
-            <button type="button" :class="{ active: viewMode === 'preview' }" @click="viewMode = 'preview'">Preview</button>
-            <button type="button" class="primary-button" @click="printChart('selected')">Print Current</button>
-            <button type="button" @click="printChart('all')">Print All</button>
+            <button type="button" :class="{ active: viewMode === 'edit' }" @click="viewMode = 'edit'" title="Edit this chart">Edit</button>
+            <button type="button" :class="{ active: viewMode === 'preview' }" @click="viewMode = 'preview'" title="See the printable chart">Preview</button>
+            <button type="button" class="primary-button" @click="printChart('selected')" title="Print the chart for the selected child">Print Current</button>
+            <button type="button" @click="printChart('all')" title="Print a chart for every child">Print All</button>
           </div>
         </div>
 
@@ -62,9 +65,9 @@
             </div>
           </div>
           <div class="button-row child-actions">
-            <button type="button" @click="addChild">Add Child</button>
-            <button type="button" @click="duplicateChild">Duplicate</button>
-            <button type="button" :disabled="chart.children.length === 1" @click="deleteChild">Delete</button>
+            <button type="button" @click="addChild" title="Start a new chart for another child">Add Child</button>
+            <button type="button" @click="duplicateChild" title="Copy this child's chart as a starting point">Duplicate</button>
+            <button type="button" :disabled="chart.children.length === 1" @click="deleteChild" title="Delete this child's chart">Delete</button>
           </div>
         </div>
       </header>
@@ -74,6 +77,7 @@
           <div class="section-heading">
             <h2>Days</h2>
           </div>
+          <p class="section-hint">Rename a day or tap its color swatch to recolor that column on the chart.</p>
           <div class="day-editor">
             <template x-for="day in activeChild.days" :key="day.key">
               <div class="day-control">
@@ -96,6 +100,8 @@
             </template>
           </div>
         </section>
+
+        <p class="section-hint">Each section holds chores. Pick an icon, name the chore, check the days it applies to, and use the coin to mark paid ones. Drag the grip handle to reorder.</p>
 
         <div class="section-list" x-sort="sortSections($item, $position)">
         <template x-for="(section, sectionIndex) in activeChild.sections" :key="section.id">
@@ -186,11 +192,13 @@
         <section class="chore-section">
           <div class="section-toolbar">
             <input type="text" x-model="activeChild.weeklyChores.title" aria-label="Weekly chores title">
-            <button type="button" class="small-add-button" @click="addWeeklyRow" aria-label="Add weekly chore">
+            <button type="button" class="small-add-button" @click="addWeeklyRow" aria-label="Add weekly chore" title="Add a weekly chore">
               <span x-html="uiIcon('plus')"></span>
               <span>Add Chore</span>
             </button>
           </div>
+
+          <p class="section-hint">Once-a-week tasks that aren't tied to a specific day. Leave a row blank to print a write-in line.</p>
 
           <div class="weekly-grid">
             <div class="weekly-editor-row weekly-grid-header">
@@ -246,17 +254,18 @@
 
         <section class="control-section">
           <h2>Data</h2>
+          <p class="section-hint">Your charts save automatically in this browser on this device — no account, nothing uploaded. Use these buttons to keep a file copy, move a chart to another device, or start over.</p>
           <div class="button-row">
-            <button type="button" @click="saveJson">Save JSON</button>
-            <button type="button" @click="saveJsonAs">Save As</button>
-            <button type="button" @click="openJsonFile">Open JSON</button>
-            <button type="button" @click="openShareDialog">Share JSON</button>
-            <button type="button" @click="downloadJson">Download JSON</button>
-            <label class="file-button">
+            <button type="button" @click="saveJson" title="Save changes to your linked JSON file">Save JSON</button>
+            <button type="button" @click="saveJsonAs" title="Save these charts to a new JSON file">Save As</button>
+            <button type="button" @click="openJsonFile" title="Open a JSON file and link it for saving">Open JSON</button>
+            <button type="button" @click="openShareDialog" title="Copy or share the chart as JSON">Share JSON</button>
+            <button type="button" @click="downloadJson" title="Download a JSON copy of these charts">Download JSON</button>
+            <label class="file-button" title="Load charts from a JSON file">
               Import JSON
               <input x-ref="jsonFileInput" type="file" accept="application/json,.json" @change="importJson">
             </label>
-            <button type="button" @click="resetToDefaults">Reset</button>
+            <button type="button" @click="resetToDefaults" title="Clear everything and start from the sample chart">Reset</button>
           </div>
           <p class="data-status" x-show="dataStatus" x-text="dataStatus"></p>
           <p class="import-error" x-show="importError" x-text="importError"></p>
@@ -281,6 +290,46 @@
             </div>
           </div>
         </form>
+      </dialog>
+
+      <dialog class="help-dialog" x-ref="helpDialog">
+        <div class="help-dialog-panel">
+          <div class="help-dialog-header">
+            <div>
+              <h2>Welcome to Chore Charts</h2>
+              <p>Build a printable responsibility chart for each child — no account needed.</p>
+            </div>
+            <button type="button" class="icon-button" @click="closeHelp()" aria-label="Close help" title="Close help" x-html="uiIcon('close')"></button>
+          </div>
+
+          <div class="help-section">
+            <h3>Quick start</h3>
+            <ol class="help-steps">
+              <li>Set the <strong>child's name</strong> and page <strong>orientation</strong> up top. Add more kids with <strong>Add Child</strong>.</li>
+              <li>Tweak the <strong>Days</strong> — rename a day or tap its color swatch to recolor that column.</li>
+              <li>In each <strong>section</strong> (Morning, Daytime, …), tap <strong>Add Chore</strong>. Pick an icon, type a name, and check the days it applies to.</li>
+              <li>Toggle the <span class="help-inline-icon svg-icon" x-html="uiIcon('eye')"></span> to show or hide a label, and the coin to mark a chore as <strong>paid</strong>.</li>
+              <li>Drag the <span class="help-inline-icon svg-icon" x-html="uiIcon('grip')"></span> handle to reorder chores or whole sections.</li>
+              <li>Use <strong>Preview</strong> to see the finished chart, then <strong>Print Current</strong> or <strong>Print All</strong>.</li>
+            </ol>
+          </div>
+
+          <div class="help-section">
+            <h3><span class="help-inline-icon svg-icon" x-html="uiIcon('info')"></span> How your data is stored</h3>
+            <ul class="help-points">
+              <li>Your charts save <strong>automatically in this browser</strong> on this device. Nothing is uploaded to a server and there's no sign-in.</li>
+              <li>Because it lives in this browser, clearing site data or switching devices/browsers means it won't follow you — use the buttons below to keep a copy.</li>
+              <li><strong>Save / Open JSON</strong> keeps a chart as a file you control. <strong>Download</strong> and <strong>Share JSON</strong> hand a copy to someone else or another device. <strong>Import</strong> loads one back in.</li>
+              <li><strong>Reset</strong> clears everything back to the sample chart.</li>
+              <li>Want it handy and offline? <strong>Install</strong> the app to your home screen when prompted.</li>
+            </ul>
+          </div>
+
+          <div class="help-dialog-actions">
+            <p class="help-reopen-note">You can reopen this anytime with the <span class="help-inline-icon svg-icon" x-html="uiIcon('help')"></span> button.</p>
+            <button type="button" class="primary-button" @click="closeHelp()">Got it</button>
+          </div>
+        </div>
       </dialog>
 
       <section class="preview-panel" x-show="viewMode === 'preview'">
